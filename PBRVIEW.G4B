@@ -22,9 +22,9 @@ if exist file &; raw cat --length=0 %file% && set /a filesize=*0x8290 ! echo Fil
 set ARG2=%~2 && set ARG3=%~3
 if not /i "%ARG2%"=="/pq" if not /i "%ARG3%"=="/pq" || set /u format=PQ && set col1=$[0x3F] && set col2=$[0x78] && set col3=$[0x3F] && set col4=$[0xF8]
 if not /i "%ARG2%"=="/ms" if not /i "%ARG3%"=="/ms" || set /u format=MS && set col1=$[0x0F] && set col2=$[0x08] && set col3=$[0x07] && set col4=$[0x07]
-#UNLOCK#if not exist format && set format=DEF && set col1=$[0x1F] && set col2=$[0x98] && set col3=$[0x1F] && set col4=$[0x90]
+#UNLOCK#if not exist format && set format=DEF && set col1=$[0x17] && set col2=$[0x91] && set col3=$[0x17] && set col4=$[0x90]
 if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] && set col3=$[0x8F] && set col4=$[0x70]
-#ORG!!!!ORG!!!!ORG#if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] && set col3=$[0x8F] && set col4=$[0x70]
+#DEFAULTSTYLE#if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] && set col3=$[0x8F] && set col4=$[0x70]
 set ARG2= && set ARG3=
 if exist BLOCK &; raw cat --hex --skip=511 --length=1 %BLOCK% > nul || echo FILE %BLOCK% is not valid && set result=0 && goto :eov ! set source=%BLOCK% && set file=
 if exist file &; raw cat --hex --skip=511 --length=1 %file% > nul || echo FILE %file% is not valid && set result=0 && goto :eov ! set "source=%file%" && set BLOCK=
@@ -32,7 +32,9 @@ if not exist forcesec && if not exist file && if not exist BLOCK &; if not %DEVI
 if not exist forcesec &; if not exist startsec if not exist startbyt |; if %DEVICE:~0,3%==(fd &; if exist startsec && set source=%DEVICE%%%startsec%+0x2000 ! set source=%DEVICE%%0+0x2000 &; set block=Y
 if not exist forcesec &; if not exist file if not exist BLOCK if not exist block |; call :searchEBxx90 &; if not exist result && goto :eov ! if not exist file && if %start%==0 && if %result%==0 && set base=%result% && set result= && set BLOCK= ! set base=%result% && set result=
 if not %block%==Y &; if "%DEVICE%"=="%~1" &; if exist startsec && set start=%startsec% ! if exist startbyt && set /A start=%startbyt%/0x200 ! if exist forcesec && set start=%forcesec% ! set start=0 &; raw cat --hex --skip=511 --length=1 %DEVICE%%%start%+1 > nul || echo Device %DEVICE%%%start%+1 is not valid && set result=0 && goto :eov ! set source=%DEVICE%%%start%+1 && set startsec= && set startbyt= && set file= && set BLOCK=
-if exist forcesec && set base=0 && set forcesec= ! if not exist base && set base=0 ! set base=%base% &; set startsec= && set startbyt=
+if exist forcesec &; if not exist file if not exist BLOCK |; set /A base=%forcesec% * 0x200 && set start=%forcesec% && set forcesec=
+if not exist base && set base=0 ! set /A base=%base%
+set startsec=
 errorcheck off
 set /A address=%base%+0 &; call :read %address% %source% ;; set /A jumph=%result%&0xffffff &; set "jump=%jumph:~-2,2%%%jumph:~-4,2%%%jumph:~-6,2%"
 if %jumph%==0x904CEB && set pbrtype=FAT
@@ -46,7 +48,8 @@ if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --lo
 if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --locate=EXFAT\x20\x20\x20 --length=8 %target% > nul && set pbrtype=NTFS
 if not exist pbrtype && set /A address=%base%+14 &; cat --skip=%base% --locate=FAT --length=0x60 %target% > nul && set pbrtype=FAT
 if not %pbrtype%==EXFAT && set /A address=%base%+0xB &; call :read %address% %source% &; if %result%==0 && set pbrtype= ! set result=
-if not exist pbrtype && echo %source% contains no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov
+if not exist pbrtype &; if %base%==0 && set base=%base% ! if exist startbyt && set base=%startbyt% ! if exist start && set /A base=%start% * 0x200 ! if exist force && set /A base=%force% * 0x200 ! set base=%base% &; if %base%==0 && echo %source% contains no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov ! echo %source% & skip=%base%: no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov
+set startbyt=
 
 clear
 #-# Pre-write colored lines (max 79 spaces!) - see notes in :EchoColor
