@@ -15,19 +15,20 @@ if not exist startsec && if /i "%~1"=="--skip" &; set /A "startbyt=%~2" && shift
 if not exist startsec && if not exist startbyt &; if /i "%~1"=="--force" && set /a "forcesec=%~2" && shift && shift
 if not /i "%~1"=="--start" if not /i "%~1"=="--skip if not /i "%~1"=="--force" || echo Wrong use of switches && set result=0 && goto :eov
 set DEVICE=%~d1
-if "%DEVICE%"=="%~1" &; if not %DEVICE:~0,3%==(fd && if not %DEVICE:~0,3%==(hd && if not %DEVICE:~0,3%==(rd && if %DEVICE:~1,-1%>=0xA0 && echo Device %DEVICE% not supported, in case of cd use a blocklist && set result=0 && goto :eov
+if "%DEVICE%"=="%~1" && if not %DEVICE:~0,3%==(fd && if not %DEVICE:~0,3%==(hd && if not %DEVICE:~0,3%==(rd &; if %DEVICE:~1,-1%>=0xA0 && echo Device '%DEVICE%' not supported without a blocklist && set result=0 && goto :eov
+if not %~1==(cd) if not %~1==(cd0) if not %~1==(cd1) if not %~1==(cd2) if not %~1==(cd3) if not %~1==(cd,0) if not %~1==(cd,1) if not %~1==(cd,2) if not %~1==(cd,3) |; echo Device '%~1' not supported without a blocklist && set result=0 && goto :eov
 set file=%~nx1 &; if exist file &; call Fn.11 "%~1" "/" && set "file=%~f1" ! call Fn.11 "%file%" "+" && set file=%DEVICE%%%file% && set BLOCK=%DEVICE%%%file% ! set file=
-if exist file && if not exist %file% && echo Abort: %file% does not exist && goto :eov
-if exist file &; raw cat --length=0 %file% && set /a filesize=*0x8290 ! echo File %file% is zero byte && set result=0 && goto :eov
+if exist file && if not exist %file% && echo Abort: '%file%' does not exist && goto :eov
+if exist file &; raw cat --length=0 %file% && set /a filesize=*0x8290 ! echo File '%file%' is zero byte && set result=0 && goto :eov
 set ARG2=%~2 && set ARG3=%~3
 if not /i "%ARG2%"=="/pq" if not /i "%ARG3%"=="/pq" || set /u format=PQ && set col1=$[0x3F] && set col2=$[0x78] && set col3=$[0x3F] && set col4=$[0xF8]
 if not /i "%ARG2%"=="/ms" if not /i "%ARG3%"=="/ms" || set /u format=MS && set col1=$[0x0F] && set col2=$[0x08] && set col3=$[0x07] && set col4=$[0x07]
 #UNLOCK#if not exist format && set format=DEF && set col1=$[0x17] && set col2=$[0x91] && set col3=$[0x17] && set col4=$[0x90]
 if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] && set col3=$[0x8F] && set col4=$[0x70]
-#DEFAULTSTYLE#if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] && set col3=$[0x8F] && set col4=$[0x70]
+#ORG!!!!ORG!!!!ORG#if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] && set col3=$[0x8F] && set col4=$[0x70]
 set ARG2= && set ARG3=
-if exist BLOCK &; raw cat --hex --skip=511 --length=1 %BLOCK% > nul || echo FILE %BLOCK% is not valid && set result=0 && goto :eov ! set source=%BLOCK% && set file=
-if exist file &; raw cat --hex --skip=511 --length=1 %file% > nul || echo FILE %file% is not valid && set result=0 && goto :eov ! set "source=%file%" && set BLOCK=
+if exist BLOCK &; raw cat --hex --skip=511 --length=1 %BLOCK% > nul || echo FILE '%BLOCK%' is not valid && set result=0 && goto :eov ! set source=%BLOCK% && set file=
+if exist file &; raw cat --hex --skip=511 --length=1 %file% > nul || echo FILE '%file%' is not valid && set result=0 && goto :eov ! set "source=%file%" && set BLOCK=
 if not exist forcesec && if not exist file && if not exist BLOCK &; if not %DEVICE:~0,3%==(hd if not %DEVICE:~0,3%==(rd |; call Fn.11 "%DEVICE%" "," |; if exist startsec && set source=%DEVICE%%%startsec%+0x2000 && set block=Y && set skipbyt=0 && set start=%startsec% && set startsec= ! set source=%DEVICE%%0+0x2000 && set block=Y && set start=0 && set skipbyt=0
 if not exist forcesec &; if not exist startsec if not exist startbyt |; if %DEVICE:~0,3%==(fd &; if exist startsec && set source=%DEVICE%%%startsec%+0x2000 ! set source=%DEVICE%%0+0x2000 &; set block=Y
 if not exist forcesec &; if not exist file if not exist BLOCK if not exist block |; call :searchEBxx90 &; if not exist result && goto :eov ! if not exist file && if %start%==0 && if %result%==0 && set base=%result% && set result= && set BLOCK= ! set base=%result% && set result=
@@ -48,9 +49,8 @@ if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --lo
 if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --locate=EXFAT\x20\x20\x20 --length=8 %target% > nul && set pbrtype=NTFS
 if not exist pbrtype && set /A address=%base%+14 &; cat --skip=%base% --locate=FAT --length=0x60 %target% > nul && set pbrtype=FAT
 if not %pbrtype%==EXFAT && set /A address=%base%+0xB &; call :read %address% %source% &; if %result%==0 && set pbrtype= ! set result=
-if not exist pbrtype &; if %base%==0 && set base=%base% ! if exist startbyt && set base=%startbyt% ! if exist start && set /A base=%start% * 0x200 ! if exist force && set /A base=%force% * 0x200 ! set base=%base% &; if %base%==0 && echo %source% contains no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov ! echo %source% & skip=%base%: no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov
-set startbyt=
-
+if not exist pbrtype &; if %base%==0 && set base=%base% ! if exist startbyt && set base=%startbyt% ! if exist start && set /A base=%start% * 0x200 ! if exist force && set /A base=%force% * 0x200 ! set base=%base% &; if %base%==0 && echo No FAT/FAT32/NTFS/EXFAT Partition Boot Record found in '%source%' && goto :eov ! echo %source% & skip=%base%: no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov
+set skipbyt=
 clear
 #-# Pre-write colored lines (max 79 spaces!) - see notes in :EchoColor
 if %format%==DEF && call :EchoColor 2 %col1% %col2% 2 &; call :EchoColor 22 %col3% %col4% 0
