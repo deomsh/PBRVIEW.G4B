@@ -1,5 +1,5 @@
 !BAT
-#-#+ PBRVIEW.G4B v0.1 (20231008), by deomsh
+#-#+ PBRVIEW.G4B v0.1 (20231009), by deomsh
 #-# View Partition Boot Record (FAT12/FAT16/FAT32/NTFS/EXFAT)
 if "%~1"=="" && echo pbrview.g4b [--start=N|--skip=n|--force=N] DEVICE|FILE [/PQ|/MS] && echo example 1: pbrview.g4b (hd0,0) && echo example 2: pbrview.g4b --start=63 (hd0) && echo example 3: pbrview.g4b (hd0,0)/file.img /pq && echo example 4: pbrview.g4b --force=63 (hd0,0)/file.img /ms && echo example 5: pbrview.g4b (0xe0)0x567+1 && goto :eof
 if not "%~1"=="/help" if not "%~1"=="--help" if not "%~1"=="help" if not "%~1"=="/?" if not "%~1"=="--?" if not "%~1"=="?" || goto :help
@@ -23,7 +23,7 @@ if exist file &; raw cat --length=0 %file% && set /a filesize=*0x8290 ! echo Fil
 set ARG2=%~2 && set ARG3=%~3
 if not /i "%ARG2%"=="/pq" if not /i "%ARG3%"=="/pq" || set /u format=PQ && set col1=$[0x3F] && set col2=$[0x78] && set col3=$[0x3F] && set col4=$[0xF8]
 if not /i "%ARG2%"=="/ms" if not /i "%ARG3%"=="/ms" || set /u format=MS && set col1=$[0x0F] && set col2=$[0x08] && set col3=$[0x07] && set col4=$[0x07]
-#UNLOCK#if not exist format && set format=DEF && set col1=$[0x17] && set col2=$[0x91] && set col3=$[0x17] && set col4=$[0x90]
+#UNLOCKME#if not exist format && set format=DEF && set col1=$[0x17] && set col2=$[0x91] && set col3=$[0x17] && set col4=$[0x90]
 if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] && set col3=$[0x8F] && set col4=$[0x70]
 #ORG!!!!ORG!!!!ORG#if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] && set col3=$[0x8F] && set col4=$[0x70]
 set ARG2= && set ARG3=
@@ -49,7 +49,7 @@ if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --lo
 if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --locate=EXFAT\x20\x20\x20 --length=8 %target% > nul && set pbrtype=NTFS
 if not exist pbrtype && set /A address=%base%+14 &; cat --skip=%base% --locate=FAT --length=0x60 %target% > nul && set pbrtype=FAT
 if not %pbrtype%==EXFAT && set /A address=%base%+0xB &; call :read %address% %source% &; if %result%==0 && set pbrtype= ! set result=
-if not exist pbrtype &; if %base%==0 && set base=%base% ! if exist startbyt && set base=%startbyt% ! if exist start && set /A base=%start% * 0x200 ! if exist force && set /A base=%force% * 0x200 ! set base=%base% &; if %base%==0 && echo No FAT/FAT32/NTFS/EXFAT Partition Boot Record found in '%source%' && goto :eov ! echo %source% & skip=%base%: no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov
+if not exist pbrtype &; if %base%==0 && set base=%base% ! if exist startbyt && set base=%startbyt% ! if exist start && set /A base=%start% * 0x200 ! if exist force && set /A base=%force% * 0x200 ! set base=%base% &; if %base%==0 && if "%DEVICE%"=="%~1" && echo Device %DEVICE% has no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov ! if %base%==0 && echo No FAT/FAT32/NTFS/EXFAT Partition Boot Record found in %source% && goto :eov ! echo %source% & skip=%base%: no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov
 set skipbyt=
 clear
 #-# Pre-write colored lines (max 79 spaces!) - see notes in :EchoColor
@@ -130,7 +130,7 @@ if %format%==DEF && echo -e %col3%sector/track \t%sectrack% \t\x20\x20%sectrkh% 
 if %format%==PQ && echo -e %col3%Sectors per Track \t%sectrack% \t\x20\x20%sectrkh% \t\t24 \t0x18 \t2
 if %format%==MS && echo -e BPB_SecPerTrk \t%sectrack% \t\x20\x20%sectrkh% \t\t24 \t0x18 \t2
 set /A address=%base%+0x1A &; call :read %address% %source% ;; set /A numheadh=%result%&0xffff &; set /a numhead=%numheadh%
-if %format%==DEF && echo -e %col4%number heads \t%numhead% \t\x20\x20%numheadh% \t\t26 \t0x1A \t2
+if %format%==DEF && echo -e %col4%number of heads %numhead% \t\x20\x20%numheadh% \t\t26 \t0x1A \t2
 if %format%==PQ && echo -e %col4%Number of Heads \t%numhead% \t\x20\x20%numheadh% \t\t26 \t0x1A \t2
 if %format%==MS && echo -e BPB_NumHeads \t%numhead% \t\x20\x20%numheadh% \t\t26 \t0x1A \t2
 set /A address=%base%+0x1C &; call :read %address% %source% ;; set /A hiddsech=%result% &; set /a hiddsec=%hiddsech%
@@ -210,13 +210,13 @@ set /A address=%base%+0x32 &; call :read %address% %source% ;; set /A backsech=%
 if %format%==DEF && echo -e %col4%backup sector \t%backsec% \t\x20\x20%backsech% \t\t50 \t0x32 \t2
 if %format%==PQ && echo -e %col4%Backup Boot Sector \t%backsec% \t\x20\x20%backsech% \t\t50 \t0x32 \t2
 if %format%==MS && echo -e BPB_BkBootSec \t%backsec% \t\x20\x20%backsech% \t\t50 \t0x32 \t2
-set /A address=%base%+0x34 &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffff &; set bpbres0=000%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres0=%bpbres0:~-4,4%
-set /A address=%base%+0x38 &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffff &; set bpbres1=000%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres1=%bpbres1:~-4,4%
-set /A address=%base%+0x3C &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffff &; set bpbres2=000%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres2=%bpbres2:~-4,4%
-set bpbresh=%bpbres2%%%bpbres1%%%bpbres0%
-if %format%==DEF && echo -e %col3%reserved \t%bpbresh% \t\t52 \t0x34 \t12 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-if %format%==PQ && echo -e %col3%Reserved \t\t%bpbresh% \t\t52 \t0x34 \t12\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-if %format%==MS && echo -e BPB_Reserved \t%bpbresh% \t\t52 \t0x34 \t12
+set /A address=%base%+0x34 &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffffffff &; set bpbres0=00000000%bpbresh:~8,2%%%bpbresh:~6,2%%%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres0=%bpbres0:~-8,8%
+set /A address=%base%+0x38 &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffffffff &; set bpbres1=00000000%bpbresh:~8,2%%%bpbresh:~6,2%%%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres1=%bpbres1:~-8,8%
+set /A address=%base%+0x3C &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffffffff &; set bpbres2=00000000%bpbresh:~8,2%%%bpbresh:~6,2%%%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres2=%bpbres2:~-8,8%
+set /A bpbresh=%bpbres2%%%bpbres1%%%bpbres0% &; set /a bpbres=%bpbresh%
+if %format%==DEF && echo -e %col3%reserved \t%bpbres%\t  %bpbresh% \t\t52 \t0x34 \t12 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+if %format%==PQ && echo -e %col3%Reserved \t\t%bpbres%\t  %bpbresh% \t\t52 \t0x34 \t12\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+if %format%==MS && echo -e BPB_Reserved \t%bpbres%\t  %bpbresh% \t\t52 \t0x34 \t12
 set /A address=%base%+0x40 &; call :read %address% %source% ;; set /A drvnumh=%result%&0xff &; set /a drivenum=%drvnumh%
 if %format%==DEF && echo -e %col4%drive number \t%drivenum% \t\x20\x20%drvnumh% \t\t64 \t0x40 \t1 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==PQ && echo -e %col4%Drive ID \t\t%drivenum% \t\x20\x20%drvnumh% \t\t64 \t0x40 \t1\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
@@ -407,7 +407,7 @@ set /A base=%base%+0x200 && set skipEB=
 :loopsearchEBxx90
 raw cat --skip=%base% --locate=\xEB --length=%length% --number=1 %source% > nul &; set /A skipEB=%?% &; set /A length=%length%+%base%-%skipEB% &; calc %skipEB% % 0x200 || set /A skipEB=%skipEB%+2 ! if %length%>=0x200 && set /A base=%skipEB% / 0x200 * 0x200 + 0x200 && set skipEB= && goto :loopsearchEBxx90
 if exist skipEB &; raw cat --skip=%skipEB% --locate=\x90 --length=1 %source% > nul && endlocal && set /a result=%skipEB%-2 && goto :eof ! if %length%>=0x200 && set /A base=%skipEB% / 0x200 * 0x200 + 0x200 && set skipEB= && goto :loopsearchEBxx90
-echo No Partition Boot Record FAT/FAT32/NTFS/EXFAT EBxx90-Jumpcode found in %source%
+echo No FAT/FAT32/NTFS/EXFAT Partition Boot Record EBxx90 jump in %source%
 endlocal && set result=
 goto :eof
 
@@ -444,7 +444,7 @@ endlocal && set result=%result%
 goto :eof
 
 :help
-echo PBRVIEW.G4B v0.1 (20231008), by deomsh
+echo PBRVIEW.G4B v0.1 (20231009), by deomsh
 echo Function: display Partition Boot Record on FAT, NTFS or EXFAT
 echo PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/MS|/PQ]
 echo Optional: --start=N|--skip=n|--force=N: N/n is starting sector/byte (0-N/n)
