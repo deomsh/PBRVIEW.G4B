@@ -1,4 +1,4 @@
-PBRVIEW.G4B v0.1 (20231008), by deomsh
+PBRVIEW.G4B v0.1 (20231009), by deomsh
 Function: display Partition Boot Record on FAT, NTFS or EXFAT
 PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/MS|/PQ]
 Optional: --start=N|--skip=n|--force=N: N/n is starting sector/byte (0-N/n)
