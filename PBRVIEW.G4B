@@ -1,6 +1,6 @@
 !BAT
-#-#+ PBRVIEW.G4B v0.1 (20231009), by deomsh
-#-# View Partition Boot Record (FAT12/FAT16/FAT32/NTFS/EXFAT)
+#-#+ PBRVIEW.G4B v0.1 (20231014), by deomsh
+#-# View Partition Boot Record (FAT12/FAT16/FAT32/NTFS/exFAT)
 if "%~1"=="" && echo pbrview.g4b [--start=N|--skip=n|--force=N] DEVICE|FILE [/PQ|/MS] && echo example 1: pbrview.g4b (hd0,0) && echo example 2: pbrview.g4b --start=63 (hd0) && echo example 3: pbrview.g4b (hd0,0)/file.img /pq && echo example 4: pbrview.g4b --force=63 (hd0,0)/file.img /ms && echo example 5: pbrview.g4b (0xe0)0x567+1 && goto :eof
 if not "%~1"=="/help" if not "%~1"=="--help" if not "%~1"=="help" if not "%~1"=="/?" if not "%~1"=="--?" if not "%~1"=="?" || goto :help
 setlocal && set *
@@ -29,13 +29,16 @@ if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] &&
 set ARG2= && set ARG3=
 if exist BLOCK &; raw cat --hex --skip=511 --length=1 %BLOCK% > nul || echo FILE '%BLOCK%' is not valid && set result=0 && goto :eov ! set source=%BLOCK% && set file=
 if exist file &; raw cat --hex --skip=511 --length=1 %file% > nul || echo FILE '%file%' is not valid && set result=0 && goto :eov ! set "source=%file%" && set BLOCK=
-if not exist forcesec && if not exist file && if not exist BLOCK &; if not %DEVICE:~0,3%==(hd if not %DEVICE:~0,3%==(rd |; call Fn.11 "%DEVICE%" "," |; if exist startsec && set source=%DEVICE%%%startsec%+0x2000 && set block=Y && set skipbyt=0 && set start=%startsec% && set startsec= ! set source=%DEVICE%%0+0x2000 && set block=Y && set start=0 && set skipbyt=0
-if not exist forcesec &; if not exist startsec if not exist startbyt |; if %DEVICE:~0,3%==(fd &; if exist startsec && set source=%DEVICE%%%startsec%+0x2000 ! set source=%DEVICE%%0+0x2000 &; set block=Y
+if not exist file && if not exist BLOCK && set rt=%@root% &; rootnoverify %~1 > nul && set /A filesec=*0x82B0 ! set filesec=0x2000 &; root %rt% > nul && set rt=
+if not exist forcesec && if not exist file && if not exist BLOCK &; if not %DEVICE:~0,3%==(hd if not %DEVICE:~0,3%==(rd |; call Fn.11 "%DEVICE%" "," |; if exist startsec && set source=%DEVICE%%%startsec%+%filesec% && set block=Y && set skipbyt=0 && set start=%startsec% && set startsec= && set filesec= ! set source=%DEVICE%%0+%filesec% && set block=Y && set start=0 && set skipbyt=0 && set filesec=
+if not exist forcesec &; if not exist startsec if not exist startbyt |; if %DEVICE:~0,3%==(fd &; if exist startsec && set source=%DEVICE%%%startsec%+%filesec% && set skipbyt=0 && set start=%startsec% && set startsec= ! set source=%DEVICE%%0+%filesec% && set start=0 && set skipbyt=0 &; set block=Y && set filesec=
 if not exist forcesec &; if not exist file if not exist BLOCK if not exist block |; call :searchEBxx90 &; if not exist result && goto :eov ! if not exist file && if %start%==0 && if %result%==0 && set base=%result% && set result= && set BLOCK= ! set base=%result% && set result=
 if not %block%==Y &; if "%DEVICE%"=="%~1" &; if exist startsec && set start=%startsec% ! if exist startbyt && set /A start=%startbyt%/0x200 ! if exist forcesec && set start=%forcesec% ! set start=0 &; raw cat --hex --skip=511 --length=1 %DEVICE%%%start%+1 > nul || echo Device %DEVICE%%%start%+1 is not valid && set result=0 && goto :eov ! set source=%DEVICE%%%start%+1 && set startsec= && set startbyt= && set file= && set BLOCK=
+if not exist source && if "%DEVICE:~0,3%"=="(fd" && set "ARG=%~1" &; if %DEVICE:~3,-1%==%ARG:~1,-1% && if %ARG:~1,-1%<=0x7E &; if exist startsec && set start=%startsec% ! if exist startbyt && set /A start=%startbyt%/0x200 ! if exist forcesec && set start=%forcesec% ! set start=0 &; raw cat --hex --skip=511 --length=1 %DEVICE%%%start%+1 > nul || echo Device %DEVICE%%%start%+1 is not valid && set result=0 && goto :eov ! set source=%DEVICE%%%start%+1 && set startsec= && set startbyt= && set file= && set BLOCK=
 if exist forcesec &; if not exist file if not exist BLOCK |; set /A base=%forcesec% * 0x200 && set start=%forcesec% && set forcesec=
 if not exist base && set base=0 ! set /A base=%base%
-set startsec=
+set startsec= && set filesec=
+if not exist source && echo Abort: %~1 not found && set result=0 && goto :eof
 errorcheck off
 set /A address=%base%+0 &; call :read %address% %source% ;; set /A jumph=%result%&0xffffff &; set "jump=%jumph:~-2,2%%%jumph:~-4,2%%%jumph:~-6,2%"
 if %jumph%==0x904CEB && set pbrtype=FAT
@@ -49,7 +52,7 @@ if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --lo
 if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --locate=EXFAT\x20\x20\x20 --length=8 %target% > nul && set pbrtype=NTFS
 if not exist pbrtype && set /A address=%base%+14 &; cat --skip=%base% --locate=FAT --length=0x60 %target% > nul && set pbrtype=FAT
 if not %pbrtype%==EXFAT && set /A address=%base%+0xB &; call :read %address% %source% &; if %result%==0 && set pbrtype= ! set result=
-if not exist pbrtype &; if %base%==0 && set base=%base% ! if exist startbyt && set base=%startbyt% ! if exist start && set /A base=%start% * 0x200 ! if exist force && set /A base=%force% * 0x200 ! set base=%base% &; if %base%==0 && if "%DEVICE%"=="%~1" && echo Device %DEVICE% has no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov ! if %base%==0 && echo No FAT/FAT32/NTFS/EXFAT Partition Boot Record found in %source% && goto :eov ! echo %source% & skip=%base%: no FAT/FAT32/NTFS/EXFAT Partition Boot Record && goto :eov
+if not exist pbrtype &; if exist BLOCK && set source=%BLOCK% ! set source=%source% &; if %base%==0 && set base=%base% ! if exist startbyt && set base=%startbyt% ! if exist start && set /A base=%start% * 0x200 ! if exist force && set /A base=%force% * 0x200 ! set base=%base% &; if %base%==0 && if "%DEVICE%"=="%~1" && echo Device %DEVICE% has no FAT/FAT32/NTFS/exFAT Partition Boot Record && goto :eov ! if %base%==0 && echo No FAT/FAT32/NTFS/exFAT Partition Boot Record found in %source% && goto :eov ! echo %source% & skip=%base%: no FAT/FAT32/NTFS/exFAT Partition Boot Record && goto :eov
 set skipbyt=
 clear
 #-# Pre-write colored lines (max 79 spaces!) - see notes in :EchoColor
@@ -61,7 +64,8 @@ if not exist file && if not exist BLOCK && if not exist block &; if %base%==0 &&
 if not exist file if not exist BLOCK || set /A skip=%base% ! set /a skip=%base%/0x200
 if exist block &; if exist start && set skip=%start% ! set /a skip=%base%/0x200
 if not exist file && if not exist BLOCK && if not %pbrtype:~0,3%==FAT && echo -e -n %pbrtype% Partition Boot Record %DEVICE% sector %skip% | set header1= &; echo -e %col1%%%header1%
-if not exist file if not exist BLOCK |; if not %pbrtype:~0,3%==FAT && echo -e -n %pbrtype% Partition Boot Record %source% offset %skip% | set header1= &; echo -e %col1%%%header1%
+if not exist file |; if not %pbrtype:~0,3%==FAT && echo -e -n %pbrtype% Partition Boot Record %source% offset %skip% | set header1= &; echo -e %col1%%%header1%
+if not exist BLOCK |; if not %pbrtype:~0,3%==FAT && echo -e -n %pbrtype% Partition Boot Record %BLOCK% offset %skip% | set header1= &; echo -e %col1%%%header1%
 if %pbrtype%==EXFAT && goto :EXFATSpecific
 if %format%==DEF && echo -e entry \t\tvalue \t\x20\x20(hex) \toffset \t(hex) \tbyte(s) | set header2= &; echo %col2%%%header2%
 if %format%==PQ && echo -e entry (%format%) \t\tvalue \t\x20\x20(hex) \toffset \t(hex) \tbyte(s)\x20\x20\x20\x20\x20\x20\x20\x20 | set header2= &; echo %col2%%%header2%
@@ -143,7 +147,8 @@ if %pbrtype%==FAT && if %totsc16h%==0 && if %totsc32h%>=1 && set /a maxclush=%to
 if not exist file && if not exist BLOCK && if not exist block &; if %base%==0 && set /a skip=%start% ! set /a skip=%base%/0x200
 if exist block &; if exist start && if %base%==0 && set skip=%start% ! if exist start && set /a skip=%base%/0x200+%start% ! set /a skip=%base%/0x200
 if not exist file && if not exist BLOCK && if %pbrtype:~0,3%==FAT && echo %pbrtype% Partition Boot Record %DEVICE% sector %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
-if not exist file if not exist BLOCK |; if %pbrtype:~0,3%==FAT && echo %pbrtype% Partition Boot Record %source% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
+if not exist file |; if %pbrtype:~0,3%==FAT && echo %pbrtype% Partition Boot Record %source% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
+if not exist BLOCK |; if %pbrtype:~0,3%==FAT && echo %pbrtype% Partition Boot Record %BLOCK% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
 call Fn.4 ;; set /a x=%@retval%>>8
 if %format%==DEF && if %pbrtype:~0,3%==FAT && echo -e -n %col4%total sect 32 \x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4%%32 \t0x20 \t4
 if %format%==DEF && if %pbrtype%==NTFS && echo -e -n %col4%total sectors \x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4%%32 \t0x20 \t4
@@ -314,7 +319,7 @@ set /A address=%base%+3 &; raw cat --skip=%address% --length=8 %source% | set oe
 if %format%==DEF && echo -e %col4%FileSystemName \t\t%oemname% \t\t3 \t0x3 \t8
 if %format%==PQ && echo -e %col4%OEM name \t\t%oemname% \t\t3 \t0x3 \t8
 if %format%==MS && echo -e BS_OEMname \t%oemname% \t\t3 \t0x3 \t8
-set /A address=%base%+11 &; raw cat --skip=%address% --locate=\x00 --length=53 %source% > nul || clear && echo EXFAT bootsector is invalid && endlocal && goto :eof
+set /A address=%base%+11 &; raw cat --skip=%address% --locate=\x00 --length=53 %source% > nul || clear && echo exFAT bootsector is invalid && endlocal && goto :eof
 set /A address=%base%+0x40 &; call :read %address% %source% ;; set /A poffsetL=%result%&0xffffffff
 set /A address=%base%+0x44 &; call :read %address% %source% ;; set /A poffsetH=%result%&0xffffffff &; set poffseth=00000000%poffsetH:~2%%%poffsetL:~2% &; set poffseth=0x%poffseth:~-8,8% &; set /a ptoffset=%poffseth% &; set /A poffseth=%poffseth%
 if not %ptoffset%<=999999999 && set poffseth=
@@ -395,9 +400,9 @@ debug %debugsts% > nul
 debug msg=3
 endlocal && set result=%result%
 goto :eof
-==========================================================================
+#==========================================================================
 # SUB-ROUTINES
-==========================================================================
+#==========================================================================
 :searchEBxx90
 setlocal
 if exist startsec && set /A base=%startsec% * 0x200 && set startsec= ! if exist startbyt && set /A base=%startbyt% && set startbyt= ! set base=0
@@ -407,7 +412,7 @@ set /A base=%base%+0x200 && set skipEB=
 :loopsearchEBxx90
 raw cat --skip=%base% --locate=\xEB --length=%length% --number=1 %source% > nul &; set /A skipEB=%?% &; set /A length=%length%+%base%-%skipEB% &; calc %skipEB% % 0x200 || set /A skipEB=%skipEB%+2 ! if %length%>=0x200 && set /A base=%skipEB% / 0x200 * 0x200 + 0x200 && set skipEB= && goto :loopsearchEBxx90
 if exist skipEB &; raw cat --skip=%skipEB% --locate=\x90 --length=1 %source% > nul && endlocal && set /a result=%skipEB%-2 && goto :eof ! if %length%>=0x200 && set /A base=%skipEB% / 0x200 * 0x200 + 0x200 && set skipEB= && goto :loopsearchEBxx90
-echo No FAT/FAT32/NTFS/EXFAT Partition Boot Record EBxx90 jump in %source%
+if not exist BLOCK && echo No FAT/FAT32/NTFS/exFAT Partition Boot Record EBxx90 jump in %source% ! echo No FAT/FAT32/NTFS/exFAT Partition Boot Record EBxx90 jump in %BLOCK%
 endlocal && set result=
 goto :eof
 
@@ -444,8 +449,8 @@ endlocal && set result=%result%
 goto :eof
 
 :help
-echo PBRVIEW.G4B v0.1 (20231009), by deomsh
-echo Function: display Partition Boot Record on FAT, NTFS or EXFAT
+echo PBRVIEW.G4B v0.1 (20231014), by deomsh
+echo Function: display Partition Boot Record on FAT, NTFS or exFAT
 echo PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/MS|/PQ]
 echo Optional: --start=N|--skip=n|--force=N: N/n is starting sector/byte (0-N/n)
 echo $[] Use if no partition is given: image-file, disk or blocklist
@@ -455,7 +460,7 @@ echo FILE can be a blocklist too
 echo With --start/--force N sector number is in 512 byte units
 echo $[] With --start/--skip/--force filesystem derived from jump-code only
 echo $[] First 4MB is searched for EBxx90 (0x2000 512 byte sectors)
-echo In case of EXFAT switch /MS or /PQ changes colors only
+echo In case of exFAT switch /MS or /PQ changes colors only
 echo Example: PBRVIEW.G4B (hd0,0)
 echo Example: PBRVIEW.G4B (fd0) /ms
 echo Example: PBRVIEW.G4B (rd) /pq
