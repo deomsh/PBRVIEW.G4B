@@ -1,5 +1,5 @@
-PBRVIEW.G4B v0.1 (20231009), by deomsh
-Function: display Partition Boot Record on FAT, NTFS or EXFAT
+PBRVIEW.G4B v0.1 (20231014), by deomsh
+Function: display Partition Boot Record on FAT, NTFS or exFAT
 PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/MS|/PQ]
 Optional: --start=N|--skip=n|--force=N: N/n is starting sector/byte (0-N/n)
  Use if no partition is given: image-file, disk or blocklist
@@ -9,7 +9,7 @@ FILE can be a blocklist too
 With --start/--force N sector number is in 512 byte units
  With --start/--skip/--force filesystem derived from jump-code only
  First 4MB is searched for EBxx90 (0x2000 512 byte sectors)
-In case of EXFAT switch /MS or /PQ changes colors only
+In case of exFAT switch /MS or /PQ changes colors only
 Example: PBRVIEW.G4B (hd0,0)
 Example: PBRVIEW.G4B (fd0) /ms
 Example: PBRVIEW.G4B (rd) /pq
