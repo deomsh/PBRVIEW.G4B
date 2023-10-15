@@ -152,7 +152,7 @@ if not exist file |; if %pbrtype:~0,3%==FAT && echo %pbrtype% Partition Boot Rec
 if not exist BLOCK |; if %pbrtype:~0,3%==FAT && echo %pbrtype% Partition Boot Record %BLOCK% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
 call Fn.4 ;; set /a x=%@retval%>>8
 if %format%==DEF && if %pbrtype:~0,3%==FAT && echo -e -n %col4%total sect 32 \x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4%%32 \t0x20 \t4
-if %format%==DEF && if %pbrtype%==NTFS && echo -e -n %col4%total sectors \x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4%%32 \t0x20 \t4
+if %format%==DEF && if %pbrtype%==NTFS && echo -e -n %col4%reserved \t%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4%%32 \t0x20 \t4
 if %format%==PQ && if %pbrtype:~0,3%==FAT && echo -e -n %col4%Big Total Sectors \t%totsec32% && call :Fn.5 34 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 48 %x% && echo -e %col4%%32 \t0x20 \t4
 if %format%==PQ && if %pbrtype%==NTFS && echo -e -n %col4%Total Sectors (>32MB) \t%totsec32% && call :Fn.5 34 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 48 %x% && echo -e %col4%%32 \t0x20 \t4
 if %format%==MS && if %pbrtype%==FAT && echo -e -n BPB_TotSec32 \t%totsec32% && call :Fn.5 26 %x% && echo -n %totsc32h% && call :Fn.5 40 %x% && echo -e 32 \t0x20 \t4
@@ -196,11 +196,11 @@ set /A address=%base%+0x24 &; call :read %address% %source% ;; set /A secpfath=%
 if %format%==DEF && echo -e %col3%sector/FAT 32 \t%secpfat% \t\x20\x20%secpfath% \t36 \t0x24 \t4
 if %format%==PQ && echo -e %col3%Big Sectors per FAT \t%secpfat% \t\x20\x20%secpfath% \t36 \t0x24 \t4
 if %format%==MS && echo -e BPB_FATSz32 \t%secpfat% \t\x20\x20%secpfath% \t36 \t0x24 \t4
-set /A address=%base%+0x28 &; call :read %address% %source% ;; set /A extflagh=%result%&0xff &; set /a extflags=%extflagh%
+set /A address=%base%+0x28 &; call :read %address% %source% ;; set /A extflagh=%result%&0xffff &; set /a extflags=%extflagh%
 if %format%==DEF && echo -e %col4%mirroring \t%extflags% \t\x20\x20%extflagh% \t\t40 \t0x28 \t2
 if %format%==PQ && echo -e %col4%Extended Flags \t\t%extflags% \t\x20\x20%extflagh% \t\t40 \t0x28 \t2
 if %format%==MS && echo -e BPB_ExtFlags \t%extflags% \t\x20\x20%extflagh% \t\t40 \t0x28 \t2
-set /A address=%base%+0x2A &; call :read %address% %source% ;; set /A fsverh=%result%&0xffff &; set fsver=000%fsverh:~4,2%%%fsverh:~2,2% &; set fsver=%fsverh:~-4,4%
+set /A address=%base%+0x2A &; call :read %address% %source% ;; set /A fsverh=%result%&0xffff &; set fsver=0000%fsverh:~2% &; set fsver=%fsver:~-4,2%%%fsver:~-2,2%
 if %format%==DEF && echo -e %col3%fs version \t%fsver% \t\x20\x20%fsverh% \t\t42 \t0x2A \t2
 if %format%==PQ && echo -e %col3%FS Version \t\t%fsver% \t\x20\x20%fsverh% \t\t42 \t0x2A \t2
 if %format%==MS && echo -e BPB_FSVer \t%fsver% \t\x20\x20%fsverh% \t\t42 \t0x2A \t2
@@ -220,6 +220,7 @@ set /A address=%base%+0x34 &; call :read %address% %source% ;; set /A bpbresh=%r
 set /A address=%base%+0x38 &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffffffff &; set bpbres1=00000000%bpbresh:~8,2%%%bpbresh:~6,2%%%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres1=%bpbres1:~-8,8%
 set /A address=%base%+0x3C &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffffffff &; set bpbres2=00000000%bpbresh:~8,2%%%bpbresh:~6,2%%%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres2=%bpbres2:~-8,8%
 set /A bpbresh=%bpbres2%%%bpbres1%%%bpbres0% &; set /a bpbres=%bpbresh%
+if not %bpbresh%<=999999999 && set bpbresh=
 if %format%==DEF && echo -e %col3%reserved \t%bpbres%\t  %bpbresh% \t\t52 \t0x34 \t12 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==PQ && echo -e %col3%Reserved \t\t%bpbres%\t  %bpbresh% \t\t52 \t0x34 \t12\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==MS && echo -e BPB_Reserved \t%bpbres%\t  %bpbresh% \t\t52 \t0x34 \t12
@@ -376,7 +377,7 @@ if %pbrtype%==exFAT && if %format%==DEF && echo -e %col3%BootSignature \t\t%magi
 if not %pbrtype%==exFAT && if %format%==PQ && echo -e %col3%Signature \t\t%magicbyt% \t\x20\x20%magicbth% \t508 \t0x1FC \t4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %pbrtype%==exFAT && if %format%==PQ && echo -e %col3%BootSignature \t\t%magicbth:~2,4% \t\x20\x20%magicbth:~0,6% \t510 \t0x1FE \t2\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %pbrtype%==exFAT && if %format%==MS && echo -e BootSignature \t\t%magicbyt% \t\x20\x20%magicbth% \t508 \t0x1FC \t4
-if not %pbrtype%==exFAT && if %format%==MS && echo -e BS_TrailSig \t%magicbyt% \t\x20\x20%magicbth:~0,6% \t510 \t0x1FE \t2
+if not %pbrtype%==exFAT && if %format%==MS && echo -e BS_Signature \t%magicbyt% \t\x20\x20%magicbth:~0,6% \t510 \t0x1FE \t2
 goto :eov
 if not %pbrtype%==FAT12 if not %pbrtype%==FAT16 || goto :eov
 if %pbrtype%==NTFS && goto :eov
@@ -462,6 +463,7 @@ echo With --start/--force N sector number is in 512 byte units
 echo $[] With --start/--skip/--force filesystem derived from jump-code only
 echo $[] First 4MB is searched for EBxx90 (0x2000 512 byte sectors)
 echo In case of exFAT switch /MS or /PQ changes colors only
+echo Unlock line 26 to change default colors to blue
 echo Example: PBRVIEW.G4B (hd0,0)
 echo Example: PBRVIEW.G4B (fd0) /ms
 echo Example: PBRVIEW.G4B (rd) /pq
