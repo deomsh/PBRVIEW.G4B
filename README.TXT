@@ -27,7 +27,8 @@ History
 Version 0.2
 Bug fixes
 Added switch with 'Good names' of Jaclaz/ Wonko the Sane
-Added notes in Default view
+Update of exFAT names
+Added notes in Default view (except exFAT)
 
 Version 0.1
 First published version
