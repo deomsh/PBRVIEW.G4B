@@ -1,8 +1,9 @@
 !BAT
-#-#+ PBRVIEW.G4B v0.1 (20231015), by deomsh
+#-#+ PBRVIEW.G4B v0.2 (20231102), by deomsh
 #-# View Partition Boot Record (FAT12/FAT16/FAT32/NTFS/exFAT)
-if "%~1"=="" && echo pbrview.g4b [--start=N|--skip=n|--force=N] DEVICE|FILE [/PQ|/MS] && echo example 1: pbrview.g4b (hd0,0) && echo example 2: pbrview.g4b --start=63 (hd0) && echo example 3: pbrview.g4b (hd0,0)/file.img /pq && echo example 4: pbrview.g4b --force=63 (hd0,0)/file.img /ms && echo example 5: pbrview.g4b (0xe0)0x567+1 && goto :eof
-if not "%~1"=="/help" if not "%~1"=="--help" if not "%~1"=="help" if not "%~1"=="/?" if not "%~1"=="--?" if not "%~1"=="?" || goto :help
+if "%~1"=="" && echo Use:  PBRVIEW.G4B [--start=N|--skip=n|--force=N] DEVICE|FILE [/PQ|/MS|/JL] && echo Help: PBRVIEW.G4B /?|--?|? && echo example 1: PBRVIEW.G4B (hd0,0) && echo example 2: PBRVIEW.G4B --start=63 (hd0) && echo example 3: PBRVIEW.G4B (hd0,0)/file.img /MS && echo example 4: PBRVIEW.G4B --force=63 (hd0,0)/file.img /JL && echo example 5: PBRVIEW.G4B (0xe0)0x567+1 && goto :eof
+if not "%~1"=="/?" if not "%~1"=="--?" if not "%~1"=="?" || goto :help
+if exist @uefi && graphicsmode > nul &; if %@retval%<=0xFF && echo Textmode of grub4efi not supported && goto :eof
 setlocal && set *
 debug status > nul ;; set /a debugsts=%@retval% > nul
 debug 1
@@ -13,16 +14,18 @@ errorcheck off
 if /i "%~1"=="--start" && set /a "startsec=%~2" && shift && shift
 if not exist startsec && if /i "%~1"=="--skip" &; set /A "startbyt=%~2" && shift && shift
 if not exist startsec && if not exist startbyt &; if /i "%~1"=="--force" && set /a "forcesec=%~2" && shift && shift
-if not /i "%~1"=="--start" if not /i "%~1"=="--skip if not /i "%~1"=="--force" || echo Wrong use of switches && set result=0 && goto :eov
+if not /i "%~1"=="--start" if not /i "%~1"=="--skip" if not /i "%~1"=="--force" || echo Wrong use of switches && set result=0 && goto :eov
 set DEVICE=%~d1
-if "%DEVICE%"=="%~1" && if not %DEVICE:~0,3%==(fd && if not %DEVICE:~0,3%==(hd && if not %DEVICE:~0,3%==(rd &; if %DEVICE:~1,-1%>=0xA0 && echo Device '%DEVICE%' not supported without a blocklist && set result=0 && goto :eov
-if not %~1==(cd) if not %~1==(cd0) if not %~1==(cd1) if not %~1==(cd2) if not %~1==(cd3) if not %~1==(cd,0) if not %~1==(cd,1) if not %~1==(cd,2) if not %~1==(cd,3) |; echo Device '%~1' not supported without a blocklist && set result=0 && goto :eov
+if "%DEVICE%"=="%~1" && if not "%DEVICE:~0,3%"=="(fd" && if not "%DEVICE:~0,3%"=="(hd" && if not "%DEVICE:~0,3%"=="(rd" &; if %DEVICE:~1,-1%>=0xA0 && echo Device '%DEVICE%' not supported without a blocklist && set result=0 && goto :eov
+if not "%~1"=="(cd)" if not "%~1"=="(cd0)" if not "%~1"=="(cd1)" if not "%~1"=="(cd2)" if not "%~1"=="(cd3)" if not "%~1"=="(cd,0)" if not "%~1"=="(cd,1)" if not "%~1"=="(cd,2)" if not "%~1"=="(cd,3)" |; echo Device '%~1' not supported without a blocklist && set result=0 && goto :eov
 set file=%~nx1 &; if exist file &; call Fn.11 "%~1" "/" && set "file=%~f1" ! call Fn.11 "%file%" "+" && set file=%DEVICE%%%file% && set BLOCK=%DEVICE%%%file% ! set file=
 if exist file && if not exist %file% && echo Abort: '%file%' does not exist && goto :eov
 if exist file &; raw cat --length=0 %file% && set /a filesize=*0x8290 ! echo File '%file%' is zero byte && set result=0 && goto :eov
 set ARG2=%~2 && set ARG3=%~3
 if not /i "%ARG2%"=="/pq" if not /i "%ARG3%"=="/pq" || set /u format=PQ && set col1=$[0x3F] && set col2=$[0x78] && set col3=$[0x3F] && set col4=$[0xF8]
 if not /i "%ARG2%"=="/ms" if not /i "%ARG3%"=="/ms" || set /u format=MS && set col1=$[0x0F] && set col2=$[0x08] && set col3=$[0x07] && set col4=$[0x07]
+#CYAN#if not /i "%ARG2%"=="/jl" if not /i "%ARG3%"=="/jl" || set /u format=JL && set col1=$[0xBF] && set col2=$[0x78] && set col3=$[0xBF] && set col4=$[0xF8]
+if not /i "%ARG2%"=="/jl" if not /i "%ARG3%"=="/jl" || set /u format=JL && set col1=$[0x9F] && set col2=$[0x78] && set col3=$[0x9F] && set col4=$[0xF8]
 #UNLOCKME#if not exist format && set format=DEF && set col1=$[0x17] && set col2=$[0x91] && set col3=$[0x17] && set col4=$[0x90]
 if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] && set col3=$[0x8F] && set col4=$[0x70]
 #ORG!!!!ORG!!!!ORG#if not exist format && set format=DEF && set col1=$[0x8F] && set col2=$[0x78] && set col3=$[0x8F] && set col4=$[0x70]
@@ -30,8 +33,8 @@ set ARG2= && set ARG3=
 if exist BLOCK &; raw cat --hex --skip=511 --length=1 %BLOCK% > nul || echo FILE '%BLOCK%' is not valid && set result=0 && goto :eov ! set source=%BLOCK% && set file=
 if exist file &; raw cat --hex --skip=511 --length=1 %file% > nul || echo FILE '%file%' is not valid && set result=0 && goto :eov ! set "source=%file%" && set BLOCK=
 if not exist file && if not exist BLOCK && set rt=%@root% &; rootnoverify %~1 > nul && set /A filesec=*0x82B0 && set /A filesize=*0x82B0*0x200 ! set filesec=0x2000 &; root %rt% > nul && set rt=
-if not exist forcesec && if not exist file && if not exist BLOCK &; if not %DEVICE:~0,3%==(hd if not %DEVICE:~0,3%==(rd |; call Fn.11 "%DEVICE%" "," |; if exist startsec && set source=%DEVICE%%%startsec%+%filesec% && set block=Y && set skipbyt=0 && set start=%startsec% && set startsec= && set filesec= ! set source=%DEVICE%%0+%filesec% && set block=Y && set start=0 && set skipbyt=0 && set filesec=
-if not exist forcesec &; if not exist startsec if not exist startbyt |; if %DEVICE:~0,3%==(fd &; if exist startsec && set source=%DEVICE%%%startsec%+%filesec% && set skipbyt=0 && set start=%startsec% && set startsec= ! set source=%DEVICE%%0+%filesec% && set start=0 && set skipbyt=0 &; set block=Y && set filesec=
+if not exist forcesec && if not exist file && if not exist BLOCK &; if not "%DEVICE:~0,3%"=="(hd" if not "%DEVICE:~0,3%"=="(rd" |; call Fn.11 "%DEVICE%" "," |; if exist startsec && set source=%DEVICE%%%startsec%+%filesec% && set block=Y && set skipbyt=0 && set start=%startsec% && set startsec= && set filesec= ! set source=%DEVICE%%0+%filesec% && set block=Y && set start=0 && set skipbyt=0 && set filesec=
+if not exist forcesec &; if not exist startsec if not exist startbyt |; if "%DEVICE:~0,3%"=="(fd" &; if exist startsec && set source=%DEVICE%%%startsec%+%filesec% && set skipbyt=0 && set start=%startsec% && set startsec= ! set source=%DEVICE%%0+%filesec% && set start=0 && set skipbyt=0 &; set block=Y && set filesec=
 if not exist forcesec &; if not exist file if not exist BLOCK if not exist block |; call :searchEBxx90 &; if not exist result && goto :eov ! if not exist file && if %start%==0 && if %result%==0 && set base=%result% && set result= && set BLOCK= ! set base=%result% && set result=
 if not %block%==Y &; if "%DEVICE%"=="%~1" &; if exist startsec && set start=%startsec% ! if exist startbyt && set /A start=%startbyt%/0x200 ! if exist forcesec && set start=%forcesec% ! set start=0 &; raw cat --hex --skip=511 --length=1 %DEVICE%%%start%+1 > nul || echo Device %DEVICE%%%start%+1 is not valid && set result=0 && goto :eov ! set source=%DEVICE%%%start%+1 && set startsec= && set startbyt= && set file= && set BLOCK=
 if not exist source && if "%DEVICE:~0,3%"=="(fd" && set "ARG=%~1" &; if %DEVICE:~3,-1%==%ARG:~1,-1% && if %ARG:~1,-1%<=0x7E &; if exist startsec && set start=%startsec% ! if exist startbyt && set /A start=%startbyt%/0x200 ! if exist forcesec && set start=%forcesec% ! set start=0 &; raw cat --hex --skip=511 --length=1 %DEVICE%%%start%+1 > nul || echo Device %DEVICE%%%start%+1 is not valid && set result=0 && goto :eov ! set source=%DEVICE%%%start%+1 && set startsec= && set startbyt= && set file= && set BLOCK=
@@ -41,24 +44,27 @@ set startsec= && set filesec=
 if not exist source && echo Abort: %~1 not found && set result=0 && goto :eof
 errorcheck off
 set /A address=%base%+0 &; call :read %address% %source% ;; set /A jumph=%result%&0xffffff &; set "jump=%jumph:~-2,2%%%jumph:~-4,2%%%jumph:~-6,2%"
-if %jumph%==0x904CEB && set pbrtype=FAT
-if %jumph%==0x9058EB && set pbrtype=FAT32
-if %jumph%==0x903CEB && set pbrtype=FAT
-if %jumph%==0x903EEB && set pbrtype=FAT
-if %jumph%==0x90FEEB && set pbrtype=FAT
-if %jumph%==0x9052EB && set pbrtype=NTFS
-if %jumph%==0x9076EB && set pbrtype=exFAT
-if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --locate=NTFS\x20\x20\x20\x20 --length=8 %target% > nul && set pbrtype=NTFS
-if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --locate=EXFAT\x20\x20\x20 --length=8 %target% > nul && set pbrtype=NTFS
-if not exist pbrtype && set /A address=%base%+14 &; cat --skip=%base% --locate=FAT --length=0x60 %target% > nul && set pbrtype=FAT
+if %jumph%==0x904CEB && set /A address=%base%+14 &; cat --skip=%base% --locatei=FAT --length=0x5B %source% > nul && set pbrtype=FAT
+if %jumph%==0x9058EB && set /A address=%base%+14 &; cat --skip=%base% --locatei=FAT --length=0x5B %source% > nul && set pbrtype=FAT32
+if %jumph%==0x903CEB && set /A address=%base%+14 &; cat --skip=%base% --locatei=FAT --length=0x5B %source% > nul && set pbrtype=FAT
+if %jumph%==0x903EEB && set /A address=%base%+14 &; cat --skip=%base% --locatei=FAT --length=0x5B %source% > nul && set pbrtype=FAT
+if %jumph%==0x90FEEB && set /A address=%base%+14 &; cat --skip=%base% --locatei=FAT --length=0x5B %source% > nul && set pbrtype=FAT
+if %jumph%==0x9052EB && raw cat --skip=%address% --locate=NTFS\x20\x20\x20\x20 --length=8 %source% > nul && set pbrtype=NTFS
+if %jumph%==0x9076EB && set /A address=%base%+3 &; raw cat --skip=%address% --locate=EXFAT\x20\x20\x20 --length=8 %source% > nul && set pbrtype=exFAT
+if not exist pbrtype && set /A address=%base%+14 &; cat --skip=%address% --locatei=FAT --length=0x5B %source% > nul && set pbrtype=FAT
+if %pbrtype:~0,3%==FAT && set /A address=%base%+0x26 &; call :read %address% %source% &; set /A result=%result%&0xff &; if not %result%==0x28 if not %result%==0x29 || set EBPB=MSDOS40
+if %pbrtype:~0,3%==FAT && if not exist EBPB && set /A address=%base%+0x42 &; call :read %address% %source% &; set /A result=%result%&0xff &; if not %result%==0x28 if not %result%==0x29 || set EBPB=MSDOS70
+if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --locate=NTFS\x20\x20\x20\x20 --length=8 %source% > nul && set pbrtype=NTFS
+if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --locate=EXFAT\x20\x20\x20 --length=8 %source% > nul && set pbrtype=exFAT
 if not %pbrtype%==exFAT && set /A address=%base%+0xB &; call :read %address% %source% &; if %result%==0 && set pbrtype= ! set result=
 if not exist pbrtype &; if exist BLOCK && set source=%BLOCK% ! set source=%source% &; if %base%==0 && set base=%base% ! if exist startbyt && set base=%startbyt% ! if exist start && set /A base=%start% * 0x200 ! if exist force && set /A base=%force% * 0x200 ! set base=%base% &; if %base%==0 && if "%DEVICE%"=="%~1" && echo Device %DEVICE% has no FAT/FAT32/NTFS/exFAT Partition Boot Record && goto :eov ! if %base%==0 && echo No FAT/FAT32/NTFS/exFAT Partition Boot Record found in %source% && goto :eov ! echo %source% & skip=%base%: no FAT/FAT32/NTFS/exFAT Partition Boot Record && goto :eov
 set skipbyt=
 clear
-#-# Pre-write colored lines (max 79 spaces!) - see notes in :EchoColor
+#-# Pre-write colored lines (max 79 spaces!) - see notes in sub-routine :EchoColor
 if %format%==DEF && call :EchoColor 2 %col1% %col2% 2 &; call :EchoColor 22 %col3% %col4% 0
 if %format%==MS && call :EchoColor 2 %col1% %col2% 2 &; call :EchoColor 22 %col3% %col4% 0
 if %format%==PQ && call :EchoColor 2 %col1% %col2% 2 &; call :EchoColor 22 %col3% %col4% 0
+if %format%==JL && call :EchoColor 2 %col1% %col2% 2 &; call :EchoColor 22 %col3% %col4% 0
 if %pbrtype:~0,3%==FAT && echo -n && call Fn.5 0 1
 if not exist file && if not exist BLOCK && if not exist block &; if %base%==0 && set /a skip=%start% ! set /A skip=%base%
 if not exist file if not exist BLOCK || set /A skip=%base% ! set /a skip=%base%/0x200
@@ -68,334 +74,391 @@ if not exist file |; if not %pbrtype:~0,3%==FAT && echo -e -n %pbrtype% Partitio
 if not exist BLOCK |; if not %pbrtype:~0,3%==FAT && echo -e -n %pbrtype% Partition Boot Record %BLOCK% offset %skip% | set header1= &; echo -e %col1%%%header1%
 if not exist block |; if not %pbrtype:~0,3%==FAT && echo -e -n %pbrtype% Partition Boot Record %DEVICE% sector %skip% | set header1= &; echo -e %col1%%%header1%
 if %pbrtype%==exFAT && goto :EXFATSpecific
-if %format%==DEF && echo -e entry \t\tvalue \t\x20\x20(hex) \toffset \t(hex) \tbyte(s) | set header2= &; echo %col2%%%header2%
+if %format%==DEF && echo -e entry \t\tvalue \t\x20\x20(hex)\t\toffset  (hex)\tbyte(s) notes | set header2= &; echo %col2%%%header2%
 if %format%==PQ && echo -e entry (%format%) \t\tvalue \t\x20\x20(hex) \toffset \t(hex) \tbyte(s)\x20\x20\x20\x20\x20\x20\x20\x20 | set header2= &; echo %col2%%%header2%
+if %format%==JL && echo -e entry (%format%)\t\x20value\t\x20\x20\x20(hex)\t offset\t (hex)\t byte(s)\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20 | set header2= &; echo %col2%%%header2%
 if %format%==MS && echo -e entry (%format%) \tvalue \t\x20\x20(hex) \toffset \t(hex) \tbyte(s) | set header2= &; echo $[0x08]%header2%
-if %format%==DEF && echo -e %col3%jump \t\t%jump% \x20\x20\x20%jumph% \t0 \t0x0 \t3
+if %format%==DEF && echo -e %col3%jump \t\t%jump% \x20\x20\x20%jumph% \t  0\t0x0\t 3
 if %format%==PQ && echo -e %col3%Jump \t\t\t%jump% \x20\x20\x20%jumph% \t0 \t0x0 \t3
 if %format%==MS && echo -e BS_jmpBoot \t%jump% \x20\x20\x20%jumph% \t0 \t0x0 \t3
+if %format%==JL && echo -e %col3%Jump_Bytes\t %jump%\t\x20\x20\x20%jumph%\t 0\t 0x0\t 3
 setlocal
 set /A address=%base%+3 &; raw cat --skip=%address% --length=8 %source% | set oemname= &; if not exist oemname && set "oemname=N/A     "
-if %format%==DEF && echo -e %col4%oemname \t%oemname% \t\t3 \t0x3 \t8
+if %format%==DEF && echo -e %col4%oemname \t%oemname% \t\t  3\t0x3 \t 8
 if %format%==PQ && echo -e %col4%OEM name \t\t%oemname% \t\t3 \t0x3 \t8
 if %format%==MS && echo -e BS_OEMName \t%oemname% \t\t3 \t0x3 \t8
+if %format%==JL && echo -e %col4%OEM_String\t %oemname%\t\t 3\t 0x3\t 8
 set /A address=%base%+0xB &; call :read %address% %source% ;; set /A bytpsech=%result%&0xffff &; set /a bytpsec=%bytpsech%
-if %format%==DEF && echo -e %col3%byte/sector \t%bytpsec% \t\x20\x20%bytpsech% \t11 \t0xB \t2
+if %format%==DEF && echo -e %col3%bytes/sector \t%bytpsec% \t\x20\x20%bytpsech%\t\t 11\t0xB \t 2
 if %format%==PQ && echo -e %col3%Bytes per Sector \t%bytpsec% \t\x20\x20%bytpsech% \t11 \t0xB \t2
 if %format%==MS && echo -e BPB_BytsPerSec \t%bytpsec% \t\x20\x20%bytpsech% \t11 \t0xB \t2
+if %format%==JL && echo -e %col3%Bytes/Sector\t %bytpsec%\t\x20\x20\x20%bytpsech%\t 11\t 0xB\t 2
 set /A address=%base%+0xD &; call :read %address% %source% ;; set /A secclush=%result%&0xff &; set /a secpclus=%secclush%
-if %format%==DEF && echo -e %col4%sector/cluster \t%secpclus% \t\x20\x20%secclush% \t\t13 \t0xD \t1
+if %format%==DEF && echo -e %col4%sectors/cluster\x20%secpclus% \t\x20\x20%secclush%\t\t 13\t0xD \t 1$[0x78]\tpower of 2\x20>\x200
 if %format%==PQ && echo -e %col4%Sectors per Cluster \t%secpclus% \t\x20\x20%secclush% \t\t13 \t0xD \t1
 if %format%==MS && echo -e BPB_SecPerClus \t%secpclus% \t\x20\x20%secclush% \t\t13 \t0xD \t1
-set /A address=%base%+0xE &; call :read %address% %source% ;; set /A rsvrdh=%result%&0xffff &; set /a reserved=%rsvrdh%
-if %format%==DEF && echo -e %col3%rsrv sector cnt %reserved% \t\x20\x20%rsvrdh% \t\t14 \t0xE \t2
-if %format%==PQ && echo -e %col3%Reserved Sectors \t%reserved% \t\x20\x20%rsvrdh% \t\t14 \t0xE \t2
+if %format%==JL && echo -e %col4%Sectors/Cluster\t %secpclus%\t\x20\x20\x20%secclush%\t\t 13\t 0xD\t 1
+set /A address=%base%+0xE &; call :read %address% %source% ;; set /A rsvrdh=%result%&0xffff &; set /a reserved=%rsvrdh% &; set rsvdsect=%reserved%
+if %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e %col3%reservd sectors\x20%reserved% \t\x20\x20%rsvrdh% \t\t 14\t0xE \t 2\t$[0x87]count
+if not %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e %col3%reservd sectors\x20%reserved% \t\x20\x20%rsvrdh% \t\t 14\t0xE \t 2\t$[0x87]must be zero
+if %format%==PQ && echo -e %col3%Reserved Sectors \t%reserved% \t\x20\x20%rsvrdh% \t\t14 \t0x0E \t2
 if %format%==MS && echo -e BPB_RsvdSecCnt \t%reserved% \t\x20\x20%rsvrdh% \t\t14 \t0xE \t2
+if %format%==JL && echo -e %col3%Reserved_Sectors %reserved%\t\x20\x20\x20%rsvrdh%\t\t 14\t 0xE\t 2
 set /A address=%base%+0x10 &; call :read %address% %source% ;; set /A numfath=%result%&0xff &; set /a numfat=%numfath%
 if %format%==PQ && echo -e %col4%Number of FATs \t\t%numfat% \t\x20\x20%numfath% \t\t16 \t0x10 \t1
-if %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e %col4%number FAT \t%numfat% \t\x20\x20%numfath% \t\t16 \t0x10 \t1
+if %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e %col4%number of FATs\x20\x20%numfat% \t\x20\x20%numfath%\t\t 16\t0x10 \t 1
 if %pbrtype:~0,3%==FAT && if %format%==MS && echo -e BPB_NumFats \t%numfat% \t\x20\x20%numfath% \t\t16 \t0x10 \t1
+if %pbrtype:~0,3%==FAT && if %format%==JL && echo -e %col4%Number_of_FATs\t %numfat%\t\x20\x20\x20%numfath%\t\t 16\t 0x10\t 1
 set /A address=%base%+0x10 &; call :read %address% %source% ;; set /A numfath=%result%&0xffffff &; set /a numfat=%numfath%
-if not %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e %col4%reserved \t%numfat% \t\x20\x20%numfath% \t\t16 \t0x10 \t3
+if not %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e %col4%reserved \t%numfat% \t\x20\x20%numfath% \t\t 16 \t0x10 \t 3$[0x78]\tmust be zero
 if not %pbrtype:~0,3%==FAT && if %format%==MS && echo -e BPB_Reserved \t%numfat% \t\x20\x20%numfath% \t\t16 \t0x10 \t3
+if not %pbrtype:~0,3%==FAT && if %format%==JL && echo -e %col4%Unused (0)\t %numfat%\t\x20\x20\x20%numfath%\t\t 16\t 0x10\t 3
 set /A address=%base%+0x11 &; call :read %address% %source% ;; set /A rootdirh=%result%&0xffff &; set /a rootdire=%rootdirh%
 call Fn.4 ;; set /a x=%@retval%>>8
-if %format%==PQ && echo -n -e %col3%Root Dir Entries \t%rootdire% && call :Fn.5 34 %x% && echo -n %col3%%%rootdirh% && call :Fn.5 48 %x% && echo -e %col3%%17 \t0x11 \t2
-if %pbrtype:~0,3%==FAT && if %format%==DEF && echo -n -e %col3%root dir entry \t%rootdire% && call :Fn.5 26 %x% && echo -n %col3%%%rootdirh% && call :Fn.5 40 %x% && echo -e %col3%%17 \t0x11 \t2
+if %format%==PQ && if not %EBPB%==MSDOS70 && echo -n -e %col3%Root Dir Entries \t%rootdire% && call :Fn.5 34 %x% && echo -n %col3%%%rootdirh% && call :Fn.5 48 %x% && echo -e %col3%%17 \t0x11 \t2
+if %format%==PQ && if %EBPB%==MSDOS70 && echo -n -e %col3%Reserved \t\t%rootdire% && call :Fn.5 34 %x% && echo -n %col3%%%rootdirh% && call :Fn.5 48 %x% && echo -e %col3%%17 \t0x11 \t2
+if %pbrtype:~0,3%==FAT && if not %EBPB%==MSDOS70 && if %format%==DEF && echo -n -e %col3%root dir entry \t%rootdire% && call :Fn.5 26 %x% && echo -n %col3%%%rootdirh% && call :Fn.5 40 %x% && echo -e %col3% 17 \t0x11 \t 2\t$[0x87]32 bytes/entry
+if %pbrtype:~0,3%==FAT && if %EBPB%==MSDOS70 && if %format%==DEF && echo -n -e %col3%root dir entry \t%rootdire% && call :Fn.5 26 %x% && echo -n %col3%%%rootdirh% && call :Fn.5 40 %x% && echo -e %col3% 17 \t0x11 \t 2\t$[0x87]must be zero
 if %pbrtype:~0,3%==FAT && if %format%==MS && echo -n -e BPB_RootEntCnt \t%rootdire% && call :Fn.5 26 %x% && echo -n %rootdirh% && call :Fn.5 40 %x% && echo -e 17 \t0x11 \t2
-set /A address=%base%+0x13 &; call :read %address% %source% ;; set /A rootdirh=%result%&0xffff &; set /a rootdire=%rootdirh%
-if not %pbrtype:~0,3%==FAT && if %format%==DEF && echo -n -e %col3%reserved \t%rootdire% && call :Fn.5 26 %x% && echo -n %col3%%%rootdirh% && call :Fn.5 40 %x% && echo -e %col3%%19 \t0x13 \t2
+if %pbrtype:~0,3%==FAT && if %format%==JL && echo -n -e %col3%Max_Root_Entries %rootdire% && call :Fn.5 27 %x% && echo -n %col3%%%rootdirh% && call :Fn.5 41 %x% && echo -e %col3%%17\t 0x11\t 2
+if not %pbrtype:~0,3%==FAT && set /A address=%base%+0x13 &; call :read %address% %source% ;; set /A rootdirh=%result%&0xffff &; set /a rootdire=%rootdirh%
+if not %pbrtype:~0,3%==FAT && if %format%==DEF && echo -n -e %col3%reserved \t%rootdire% && call :Fn.5 26 %x% && echo -n %col3%%%rootdirh% && call :Fn.5 40 %x% && echo -e %col3% 19 \t0x13 \t 2$[0x87]\tmust be zero
 if not %pbrtype:~0,3%==FAT && if %format%==MS && echo -n -e BPB_Reserved \t%rootdire% && call :Fn.5 26 %x% && echo -n %rootdirh% && call :Fn.5 40 %x% && echo -e 19 \t0x13 \t2
+if not %pbrtype:~0,3%==FAT && if %format%==JL && echo -n -e %col3%Unused (1)\t %rootdire% && call :Fn.5 27 %x% && echo -n %col3%%%rootdirh% && call :Fn.5 41 %x% && echo -e %col3%%19\t 0x13\t 2
 #-# TotSect16 unused in NTFS & Switch colors
-if %pbrtype%==NTFS && set col5=%col3% && set col3=%col4% &; set col4=%col5% && set col5= && goto :skip_TotSect16
+if %pbrtype%==NTFS && if not %format%==PQ && set col5=%col3% && set col3=%col4% &; set col4=%col5% && set col5= && goto :skip_TotSect16
 set /A address=%base%+0x13 &; call :read %address% %source% ;; set /A totsc16h=%result%&0xffff &; set /a totsec16=%totsc16h%
-if %pbrtype%==FAT && if %totsc16h%>=1 && set /a maxclush=%totsc16h%/%secclush% &; if %maxclush%<=4095 && set pbrtype=FAT12 ! if %maxclush%<=65535 && set pbrtype=FAT16
+set /A address=%base%+0x10 &; call :read %address% %source% ;; set /A numfath=%result%&0xff &; set /a numfat=%numfath%
+set /A address=%base%+0x16 &; call :read %address% %source% ;; set /A secpfath=%result%&0xffff &; set /a secpfat=%secpfath%
+if %pbrtype:~0,3%==FAT && if %totsc16h%>=1 && set /a rootsec=%rootdire% * 32 / %bytpsec% &; set /a maxclush=-1 * %numfat% * %secpfat% + %totsc16h% - %rsvdsect% - %rootsec% / %secclush% &; if %maxclush%<=4085 && set pbrtype=FAT12 ! set pbrtype=FAT16
 call Fn.4 ;; set /a x=%@retval%>>8
-if %format%==DEF && echo -e -n %col4%total sect 16 \x20\x20%totsec16% && call :Fn.5 26 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 40 %x% && echo -e %col4%%19 \t0x13 \t2
+if %format%==DEF && if not %EBPB%==MSDOS70 && set /a max=0x10000 * %bytpsec% / 1m &; echo -e -n %col4%total sectors\x20\x20\x20%totsec16% && call :Fn.5 26 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 40 %x% && echo -e %col4% 19 \t0x13 \t 2\t$[0x78]< %max%MB && set max=
+if %format%==DEF && if %EBPB%==MSDOS70 && set /a max=0x10000 * %bytpsec% / 1m &; echo -e -n %col4%total sectors\x20\x20\x20%totsec16% && call :Fn.5 26 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 40 %x% &; if not %pbrtype%==FAT32 && echo -e %col4% 19 \t0x13 \t 2\t$[0x78]< %max%MB ! echo -e %col4% 19 \t0x13 \t 2\t$[0x78]must be zero &; set max=
 if %format%==PQ &; if not %pbrtype%==FAT12 if not %pbrtype%==FAT16 || echo -n -e %col4%Total Sectors \t\t%totsec16% && call :Fn.5 34 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 48 %x% && echo -e %col4%%19 \t0x13 \t2
-if %format%==PQ && if %pbrtype%==FAT && if %totsc16h%==0 && echo -n -e %col4%Reserved \t\t%totsec16% && call :Fn.5 34 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 48 %x% && echo -e %col4%%19 \t0x13 \t2
-if %format%==PQ && if %pbrtype%==FAT32 && echo -n -e %col4%Reserved \t\t%totsec16% && call :Fn.5 34 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 48 %x% && echo -e %col4%%19 \t0x13 \t2
-if %format%==PQ && if %pbrtype%==NTFS && echo -n -e Total Sectors \t\t%totsec16% && call :Fn.5 34 %x% && echo -n %totsc16h% && call :Fn.5 48 %x% && echo -e 19 \t0x13 \t2
+if %format%==PQ && if %pbrtype:~0,3%==FAT && if %totsc16h%==0 && echo -n -e %col4%Reserved \t\t%totsec16% && call :Fn.5 34 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 48 %x% && echo -e %col4%%19 \t0x13 \t2
+if %format%==PQ && if %EBPB%==MSDOS70 && echo -n -e %col4%Reserved \t\t%totsec16% && call :Fn.5 34 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 48 %x% && echo -e %col4%%19 \t0x13 \t2
+if %format%==PQ && if %pbrtype%==NTFS && echo -n -e %col4%Total Sectors \t\t%totsec16% && call :Fn.5 34 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 48 %x% && echo -e %col4%%19 \t0x13 \t2
 if %format%==MS &; if not %pbrtype%==FAT12 if not %pbrtype%==FAT16 || echo -n -e BPB_TotSec16 \t%totsec16% && call :Fn.5 26 %x% && echo -n %totsc16h% && call :Fn.5 40 %x% && echo -e 19 \t0x13 \t2
-if %format%==MS && if %pbrtype%==FAT32 && echo -n -e BPB_TotSec16 \t%totsec16% && call :Fn.5 26 %x% && echo -n %totsc16h% && call :Fn.5 40 %x% && echo -e 19 \t0x13 \t2
+if %format%==JL &; if not %pbrtype:~0,3%==FAT if not %pbrtype%==FAT12 if not %pbrtype%==FAT16 if not %EBPB%==MSDOS70 || echo -n -e %col4%Small_Sectors\t %totsec16% && call :Fn.5 27 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 41 %x% && echo -e %col4%%19\t 0x13\t 2
+if %format%==MS && if %EBPB%==MSDOS70 && echo -n -e BPB_TotSec16 \t%totsec16% && call :Fn.5 26 %x% && echo -n %totsc16h% && call :Fn.5 40 %x% && echo -e 19 \t0x13 \t2
 :skip_TotSect16
 set /A address=%base%+0x15 &; call :read %address% %source% ;; set /A mediabth=%result%&0xff &; set /a mediabyt=%mediabth%
-if %format%==DEF && echo -e %col3%mediabyte \t%mediabyt% \t\x20\x20%mediabth% \t\t21 \t0x15 \t1
+if %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e -n %col3%mediabyte \t%mediabyt% \t\x20\x20%mediabth% \t\t 21 \t0x15 \t 1 && call :mediabits "%mediabyt%" &; if %mediabyt%>=0xF0 && echo -e $[0x87]\tbit 3-0 %bit3%%%bit2%%%bit1%%%bit0% ! echo &; set bit0= && set bit1= && set bit2= && set bit3= && set bit7=
+if not %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e -n %col3%mediabyte \t%mediabyt% \t\x20\x20%mediabth% \t\t 21 \t0x15 \t 1 && call :mediabits "%mediabyt%" &; if %mediabyt%>=0xF0 && echo -e $[0x78]\tbit 3-0 %bit3%%%bit2%%%bit1%%%bit0% ! echo &; set bit0= && set bit1= && set bit2= && set bit3= && set bit7=
 if %format%==PQ && echo -e %col3%Media Descriptor \t%mediabyt% \t\x20\x20%mediabth% \t\t21 \t0x15 \t1
 if %format%==MS && echo -e BPB_Media \t%mediabyt% \t\x20\x20%mediabth% \t\t21 \t0x15 \t1
+if %format%==JL && echo -e %col3%Media_Type\t %mediabyt%\t\x20\x20\x20%mediabth%\t\t 21\t 0x15\t 1
 set /A address=%base%+0x16 &; call :read %address% %source% ;; set /A secpfath=%result%&0xffff &; set /a secpfat=%secpfath%
 call Fn.4 ;; set /a x=%@retval%>>8
-if %pbrtype:~0,3%==FAT && if %format%==DEF && echo -n -e %col4%sector/FAT 16 \t%secpfat% && call :Fn.5 26 %x% && echo -n %col4%%%secpfath% && call :Fn.5 40 %x% && echo -e %col4%%22 \t0x16 \t2
-if not %pbrtype:~0,3%==FAT && if %format%==DEF && echo -n -e %col4%reserved \t%secpfat% && call :Fn.5 26 %x% && echo -n %col4%%%secpfath% && call :Fn.5 40 %x% && echo -e %col4%%22 \t0x16 \t2
+if %pbrtype:~0,3%==FAT && if not %EBPB%==MSDOS70 && if %format%==DEF && echo -n -e %col4%sectors/FAT\t%secpfat% && call :Fn.5 26 %x% && echo -n %col4%%%secpfath% && call :Fn.5 40 %x% && echo -e %col4% 22 \t0x16 \t 2\t$[0x78]16-bit count
+if %pbrtype:~0,3%==FAT && if %EBPB%==MSDOS70 && if %format%==DEF && echo -n -e %col4%sectors/FAT\t%secpfat% && call :Fn.5 26 %x% && echo -n %col4%%%secpfath% && call :Fn.5 40 %x% &; if not %pbrtype%==FAT32 && echo -e %col4% 22 \t0x16 \t 2\t$[0x78]16-bit count ! echo -e %col4% 22 \t0x16 \t 2\t$[0x78]must be zero
+if not %pbrtype:~0,3%==FAT && if %format%==DEF && echo -n -e %col4%reserved \t%secpfat% && call :Fn.5 26 %x% && echo -n %col4%%%secpfath% && call :Fn.5 40 %x% && echo -e %col4% 22 \t0x16 \t 2$[0x87]\tmust be zero
 if %format%==PQ && echo -n -e %col4%Sectors per FAT \t%secpfat% && call :Fn.5 34 %x% && echo -n %col4%%%secpfath% && call :Fn.5 48 %x% && echo -e %col4%%22 \t0x16 \t2
 if %pbrtype:~0,3%==FAT && if %format%==MS && echo -n -e BPB_FATSz16 \t%secpfat% && call :Fn.5 26 %x% && echo -n %secpfath% && call :Fn.5 40 %x% && echo -e 22 \t0x16 \t2
+if %pbrtype:~0,3%==FAT && if %format%==JL && echo -n -e %col4%Sectors/Fat\t %secpfat% && call :Fn.5 27 %x% && echo -n %col4%%%secpfath% && call :Fn.5 41 %x% && echo -e %col4%%22\t 0x16\t 2
 if not %pbrtype:~0,3%==FAT && if %format%==MS && echo -n -e BPB_Reserved \t%secpfat% && call :Fn.5 26 %x% && echo -n %secpfath% && call :Fn.5 40 %x% && echo -e 22 \t0x16 \t2
+if not %pbrtype:~0,3%==FAT && if %format%==JL && echo -n -e %col4%Unused (2)\t %secpfat% && call :Fn.5 27 %x% && echo -n %col4%%%secpfath% && call :Fn.5 41 %x% && echo -e %col4%%22\t 0x16\t 2
 set /A address=%base%+0x18 &; call :read %address% %source% ;; set /A sectrkh=%result%&0xffff &; set /a sectrack=%sectrkh%
-if %format%==DEF && echo -e %col3%sector/track \t%sectrack% \t\x20\x20%sectrkh% \t\t24 \t0x18 \t2
+if %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e %col3%sectors/track\t%sectrack% \t\x20\x20%sectrkh% \t\t 24 \t0x18 \t 2\t$[0x87]sectors/head
+if not %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e %col3%sectors/track\t%sectrack% \t\x20\x20%sectrkh% \t\t 24 \t0x18 \t 2\t$[0x78]sectors/head
 if %format%==PQ && echo -e %col3%Sectors per Track \t%sectrack% \t\x20\x20%sectrkh% \t\t24 \t0x18 \t2
 if %format%==MS && echo -e BPB_SecPerTrk \t%sectrack% \t\x20\x20%sectrkh% \t\t24 \t0x18 \t2
+if %format%==JL && echo -e %col3%Sectors/Head\t %sectrack%\t\x20\x20\x20%sectrkh%\t\t 24\t 0x18\t 2
 set /A address=%base%+0x1A &; call :read %address% %source% ;; set /A numheadh=%result%&0xffff &; set /a numhead=%numheadh%
-if %format%==DEF && echo -e %col4%number of heads %numhead% \t\x20\x20%numheadh% \t\t26 \t0x1A \t2
+if %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e %col4%number of heads %numhead% \t\x20\x20%numheadh% \t\t 26 \t0x1A \t 2\t$[0x78]tracks/cylinder
+if not %pbrtype:~0,3%==FAT && if %format%==DEF && echo -e %col4%number of heads %numhead% \t\x20\x20%numheadh% \t\t 26 \t0x1A \t 2\t$[0x87]tracks/cylinder
 if %format%==PQ && echo -e %col4%Number of Heads \t%numhead% \t\x20\x20%numheadh% \t\t26 \t0x1A \t2
 if %format%==MS && echo -e BPB_NumHeads \t%numhead% \t\x20\x20%numheadh% \t\t26 \t0x1A \t2
-set /A address=%base%+0x1C &; call :read %address% %source% ;; set /A hiddsech=%result% &; set /a hiddsec=%hiddsech%
+if %format%==JL && echo -e %col4%Number_of_Heads\t %numhead%\t\x20\x20\x20%numheadh%\t\t 26\t 0x1A\t 2
+set /A address=%base%+0x1C &; call :read %address% %source% ;; set /A hiddsech=%result%&0xffffffff &; set /a hiddsec=%hiddsech%
 call Fn.4 ;; set /a x=%@retval%>>8
-if %format%==DEF && echo -n -e %col3%hidden sectors \t%hiddsec% && call :Fn.5 26 %x% && echo -n %col3%%%hiddsech% && call :Fn.5 40 %x% && echo -e %col3%%28 \t0x1C \t4
+if %pbrtype:~0,3%==FAT && if %format%==DEF && echo -n -e %col3%hidden sectors \t%hiddsec% && call :Fn.5 26 %x% && echo -n %col3%%%hiddsech% && call :Fn.5 40 %x% &; if %hiddsec%==0 && echo -e %col3% 28 \t0x1C \t 4\t$[0x87]absolute offset ! echo -e %col3% 28 \t0x1C \t 4\t$[0x87]relative offset
+if %pbrtype%==NTFS && if %format%==DEF && echo -n -e %col3%hidden sectors \t%hiddsec% && call :Fn.5 26 %x% && echo -n %col3%%%hiddsech% && call :Fn.5 40 %x% &; if %hiddsec%==0 && echo -e %col3% 28 \t0x1C \t 4\t$[0x78]absolute offset ! echo -e %col3% 28 \t0x1C \t 4\t$[0x78]relative offset
 if %format%==PQ && echo -n -e %col3%Hidden Sectors \t\t%hiddsec% && call :Fn.5 34 %x% && echo -n %col3%%%hiddsech% && call :Fn.5 48 %x% && echo -e %col3%%28 \t0x1C \t4
 if %format%==MS && echo -n -e BPB_HiddSec \t%hiddsec% && call :Fn.5 26 %x% && echo -n %hiddsech% && call :Fn.5 40 %x% && echo -e 28 \t0x1C \t4
+if %format%==JL && echo -n -e %col3%Sectors_Before\t %hiddsec% && call :Fn.5 27 %x% && echo -n %col3%%%hiddsech% && call :Fn.5 41 %x% && echo -e %col3%%28\t 0x1C\t 4
 set /A address=%base%+0x20 &; call :read %address% %source% ;; set /A totsc32h=%result%&0xffffffff &; set /a totsec32=%totsc32h%
-if %pbrtype%==FAT && if %totsc16h%==0 && if %totsc32h%>=1 && set /a maxclush=%totsc32h%/%secclush% &; if %maxclush%<=65535 && set pbrtype=FAT16 ! set pbrtype=FAT32
+if %secpfat%==0 && set /A address=%base%+0x24 &; call :read %address% %source% &; set /A secpfath=%result%&0xffffffff &; set /a secpfat=%secpfath%
+if %pbrtype:~0,3%==FAT && if %totsc16h%==0 && if %totsc32h%>=1 && set /a rootsec=%rootdire% * 32 / %bytpsec% &; set /a maxclush=-1 * %numfat% * %secpfat% + %totsc32h% - %rsvdsect% - %rootsec% / %secclush% &; if %maxclush%<=65526 && set pbrtype=FAT16 ! set pbrtype=FAT32
 if not exist file && if not exist BLOCK && if not exist block &; if %base%==0 && set /a skip=%start% ! set /a skip=%base%/0x200
 if exist block &; if exist start && if %base%==0 && set skip=%start% ! if exist start && set /a skip=%base%/0x200+%start% ! set /a skip=%base%/0x200
 if not exist file && if not exist BLOCK && if %pbrtype:~0,3%==FAT && echo %pbrtype% Partition Boot Record %DEVICE% sector %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
 if not exist file |; if %pbrtype:~0,3%==FAT && echo %pbrtype% Partition Boot Record %source% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
 if not exist BLOCK |; if %pbrtype:~0,3%==FAT && echo %pbrtype% Partition Boot Record %BLOCK% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
 call Fn.4 ;; set /a x=%@retval%>>8
-if %format%==DEF && if %pbrtype:~0,3%==FAT && echo -e -n %col4%total sect 32 \x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4%%32 \t0x20 \t4
-if %format%==DEF && if %pbrtype%==NTFS && echo -e -n %col4%reserved \t%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4%%32 \t0x20 \t4
+if %format%==DEF && if %pbrtype:~0,3%==FAT && if not %EBPB%==MSDOS70 && set /a max=0x10000 * %bytpsec% / 1m &; echo -e -n %col4%total sectors\x20\x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4% 32 \t0x20 \t 4\t$[0x78]>=%max%MB && set max=
+if %format%==DEF && if %pbrtype:~0,3%==FAT && if %EBPB%==MSDOS70 && set /a max=0x10000 * %bytpsec% / 1m &; echo -e -n %col4%total sectors\x20\x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4% 32 \t0x20 \t 4\t$[0x78]>=%max%MB && set max=
+if %format%==DEF && if %pbrtype%==NTFS && echo -e -n %col4%reserved \t%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4% 32 \t0x20 \t 4$[0x87]\tmust be zero
 if %format%==PQ && if %pbrtype:~0,3%==FAT && echo -e -n %col4%Big Total Sectors \t%totsec32% && call :Fn.5 34 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 48 %x% && echo -e %col4%%32 \t0x20 \t4
 if %format%==PQ && if %pbrtype%==NTFS && echo -e -n %col4%Total Sectors (>32MB) \t%totsec32% && call :Fn.5 34 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 48 %x% && echo -e %col4%%32 \t0x20 \t4
-if %format%==MS && if %pbrtype%==FAT && echo -e -n BPB_TotSec32 \t%totsec32% && call :Fn.5 26 %x% && echo -n %totsc32h% && call :Fn.5 40 %x% && echo -e 32 \t0x20 \t4
+if %format%==MS && if %pbrtype:~0,3%==FAT && echo -e -n BPB_TotSec32 \t%totsec32% && call :Fn.5 26 %x% && echo -n %totsc32h% && call :Fn.5 40 %x% && echo -e 32 \t0x20 \t4
+if %format%==JL && if %pbrtype:~0,3%==FAT && echo -e -n %col4%Large_Sectors\t %totsec32% && call :Fn.5 27 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 41 %x% && echo -e %col4%%32\t 0x20\t 4
 if %format%==MS && if %pbrtype%==FAT32 && echo -e -n BPB_TotSec32 \t%totsec32% && call :Fn.5 26 %x% && echo -n %totsc32h% && call :Fn.5 40 %x% && echo -e 32 \t0x20 \t4
 if %format%==MS && if %pbrtype%==NTFS && echo -e -n BPB_Reserved \t%totsec32% && call :Fn.5 26 %x% && echo -n %totsc32h% && call :Fn.5 40 %x% && echo -e 32 \t0x20 \t4
+if %format%==JL && if %pbrtype%==NTFS && echo -e -n %col4%Unused (3)\t %totsec32% && call :Fn.5 27 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 41 %x% && echo -e %col4%%32\t 0x20\t 4
 endlocal && set pbrtype=%pbrtype% && set "header1=%header1%"
-if %pbrtype%==FAT32 && goto :FAT32Specific
+if %pbrtype:~0,3%==FAT && if %EBPB%==MSDOS70 && goto :FAT32Specific
 if %pbrtype%==NTFS && goto :NTFSSpecific
 setlocal
 if %pbrtype:~0,3%==FAT && set /A address=%base%+0x24 &; call :read %address% %source% ;; set /A drvnumh=%result%&0xff &; set /a drivenum=%drvnumh%
-if %format%==DEF && echo -e %col3%drive number \t%drivenum% \t\x20\x20%drvnumh% \t\t36 \t0x24 \t1
+if %format%==DEF &; if %drivenum%<=0x7E && set "note=removable media" ! if %drivenum%==0x7F && set "note=internal pupose" ! if %drivenum%<=0xFE && set "note=fixed disk" ! if %drivenum%==0xFF && set "note=internal purpose" &; echo -e %col3%drive number \t%drivenum% \t\x20\x20%drvnumh% \t\t 36 \t0x24 \t 1\t$[0x87]%note% && set note=
 if %format%==PQ && echo -e %col3%Drive ID \t\t%drivenum% \t\x20\x20%drvnumh% \t\t36 \t0x24 \t1
 if %format%==MS && echo -e BS_DrvNum \t%drivenum% \t\x20\x20%drvnumh% \t\t36 \t0x24 \t1
+if %format%==JL && echo -e %col3%Disk_Number\t %drivenum%\t\x20\x20\x20%drvnumh%\t\t 36\t 0x24\t 1
 set /A address=%base%+0x25 &; call :read %address% %source% ;; set /A rsvrdh=%result%&0xff &; set /a reserved=%rsvrdh%
-if %format%==DEF && echo -e %col4%reserved NT \t%reserved% \t\x20\x20%rsvrdh% \t\t37 \t0x25 \t1
-if %format%==PQ && echo -e %col4%Dirty Flag \t\t%reserved% \t\x20\x20%rsvrdh% \t\t37 \t0x25 \t1
+if %format%==DEF && echo -e %col4%reserved NT \t%reserved% \t\x20\x20%rsvrdh% \t\t 37 \t0x25 \t 1\t$[0x78]flags in win NT
+if %format%==PQ && echo -e %col4%Dirty Flag:\t\t%reserved% \t\x20\x20%rsvrdh% \t\t37 \t0x25 \t1
 if %format%==MS && echo -e BS_Reserved1 \t%reserved% \t\x20\x20%rsvrdh% \t\t37 \t0x25 \t1
+if %format%==JL && echo -e %col4%Dirty_FS_Flag\t %reserved%\t\x20\x20\x20%rsvrdh%\t\t 37\t 0x25\t 1
 set /A address=%base%+0x26 &; call :read %address% %source% ;; set /A extendh=%result%&0xff &; set /a extended=%extendh%
-if %format%==DEF && echo -e %col3%extended \t%extended% \t\x20\x20%extendh% \t\t38 \t0x26 \t1
+if %format%==DEF && echo -e -n %col3%ebpb signature\t%extended% \t\x20\x20%extendh% \t\t 38 \t0x26 \t 1 &; if not %extendh%==0x28 if not %extendh%==0x29 || echo -e $[0x87]\tversion 4.0 ! echo
 if %format%==PQ && echo -e %col3%Extended Boot Sig \t%extended% \t\x20\x20%extendh% \t\t38 \t0x26 \t1
 if %format%==MS && echo -e BS_BootSig \t%extended% \t\x20\x20%extendh% \t\t38 \t0x26 \t1
+if %format%==JL && echo -e %col3%FAT_Signature\t %extended%\t\x20\x20\x20%extendh%\t\t 38\t 0x26\t 1
 set /A address=%base%+0x27 &; call :read %address% %source% ;; set /A uuidh=%result%&0xffffffff &; set uuid=00000000%uuidh:~2% &; set uuidh=0x%uuid:~-8,8%
-if %format%==DEF && echo -e %col4%uuid \t\t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t39 \t0x27 \t4
+if %format%==DEF && echo -e %col4%uuid \t\t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t 39 \t0x27 \t 4
 if %format%==PQ && echo -e %col4%Serial Number \t\t%uuid:~-8,4%%%uuid:~-4,4% \x20%uuidh% \t39 \t0x27 \t4
 if %format%==MS && echo -e BS_VolID \t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t39 \t0x27 \t4
+if %format%==JL && echo -e %col4%Volume_Serial\t %uuid:~-8,4%-%uuid:~-4,4% %uuidh%\t 39\t 0x27\t 4
 set /A address=%base%+0x2B &; raw cat --skip=%address% --length=11 %source% | set label= &; if not exist label && set "label=N/A        "
-if %format%==DEF && echo -e %col3%label \t\t%label% \t\t43 \t0x2B \t11
+if %format%==DEF && echo -e %col3%label \t\t%label% \t\t 43 \t0x2B \t11
 if %format%==PQ && echo -e %col3%Volume Name \t\t%label% \t\t43 \t0x2B \t11
 if %format%==MS && echo -e BS_VolLab \t%label% \t\t43 \t0x2B \t11
+if %format%==JL && echo -e %col3%Volume_Label\t %label%\t\t 43\t 0x2B\t 11
 set /A address=%base%+0x36 &; raw cat --skip=%address% --length=8 %source% | set filesys= &; if not exist filesys && set "filesys=N/A     "
-if %format%==DEF && echo -e %col4%file system \t%filesys% \t\t54 \t0x36 \t8
+if %format%==DEF && echo -e %col4%file system \t%filesys% \t\t 54 \t0x36 \t 8
 if %format%==PQ && echo -e %col4%File System ID \t\t%filesys% \t\t54 \t0x36 \t8
 if %format%==MS && echo -e BS_FilSysType \t%filesys% \t\t54 \t0x36 \t8
+if %format%==JL && echo -e %col4%System_ID\t %filesys%\t\t 54\t 0x36\t 8
 endlocal
 goto :EndOfSector0
-
+::
 :FAT32Specific
 setlocal
 pager on
-set /A address=%base%+0x24 &; call :read %address% %source% ;; set /A secpfath=%result%&0xffff &; set /a secpfat=%secpfath%
-if %format%==DEF && echo -e %col3%sector/FAT 32 \t%secpfat% \t\x20\x20%secpfath% \t36 \t0x24 \t4
+set /A address=%base%+0x24 &; call :read %address% %source% ;; set /A secpfath=%result%&0xffffffff &; set /a secpfat=%secpfath%
+if %format%==DEF && echo -e %col3%sectors/FAT32 \t%secpfat% \t\x20\x20%secpfath% \t 36 \t0x24 \t 4\t$[0x87]32-bit count
 if %format%==PQ && echo -e %col3%Big Sectors per FAT \t%secpfat% \t\x20\x20%secpfath% \t36 \t0x24 \t4
 if %format%==MS && echo -e BPB_FATSz32 \t%secpfat% \t\x20\x20%secpfath% \t36 \t0x24 \t4
+if %format%==JL && echo -e %col3%Sectors/Fat\t %secpfat%\t\x20\x20\x20%secpfath%\t 36\t 0x24\t 4
 set /A address=%base%+0x28 &; call :read %address% %source% ;; set /A extflagh=%result%&0xffff &; set /a extflags=%extflagh%
-if %format%==DEF && echo -e %col4%mirroring \t%extflags% \t\x20\x20%extflagh% \t\t40 \t0x28 \t2
+if %format%==DEF && echo -e -n %col4%mirroring \t%extflags% \t\x20\x20%extflagh% \t\t 40 \t0x28 \t 2 &; call :mediabits "%extflags%" &; echo -e $[0x78]\tbit7-0 %bit7%%000%bit3%%%bit2%%%bit1%%%bit0% && set bit0= && set bit1= && set bit2= && set bit3= && set bit7=
 if %format%==PQ && echo -e %col4%Extended Flags \t\t%extflags% \t\x20\x20%extflagh% \t\t40 \t0x28 \t2
 if %format%==MS && echo -e BPB_ExtFlags \t%extflags% \t\x20\x20%extflagh% \t\t40 \t0x28 \t2
+if %format%==JL && echo -e %col4%Flags\t\t %extflags%\t\x20\x20\x20%extflagh%\t\t 40\t 0x28\t 2
 set /A address=%base%+0x2A &; call :read %address% %source% ;; set /A fsverh=%result%&0xffff &; set fsver=0000%fsverh:~2% &; set fsver=%fsver:~-4,2%%%fsver:~-2,2%
-if %format%==DEF && echo -e %col3%fs version \t%fsver% \t\x20\x20%fsverh% \t\t42 \t0x2A \t2
+if %format%==DEF && echo -e %col3%fs version \t%fsver% \t\x20\x20%fsverh% \t\t 42 \t0x2A \t 2$[0x87]\trevision %fsver:~0,2%:%fsver:~2,2%
 if %format%==PQ && echo -e %col3%FS Version \t\t%fsver% \t\x20\x20%fsverh% \t\t42 \t0x2A \t2
 if %format%==MS && echo -e BPB_FSVer \t%fsver% \t\x20\x20%fsverh% \t\t42 \t0x2A \t2
-set /A address=%base%+0x2C &; call :read %address% %source% ;; set /A rootclsh=%result%&0xffff &; set /a rootclus=%rootclsh%
-if %format%==DEF && echo -e %col4%first rootclus \t%rootclus% \t\x20\x20%rootclsh% \t\t44 \t0x2C \t4
+if %format%==JL && echo -e %col3%FS_Version\t %fsver%\t\x20\x20\x20%fsverh%\t\t 42\t 0x2A\t 2
+set /A address=%base%+0x2C &; call :read %address% %source% ;; set /A rootclsh=%result%&0xffffffff &; set /a rootclus=%rootclsh%
+if %format%==DEF && echo -e %col4%first rootclus \t%rootclus% \t\x20\x20%rootclsh% \t\t 44 \t0x2C \t 4\t$[0x78]cluster number
 if %format%==PQ && echo -e %col4%First Cluster of Root \t%rootclus% \t\x20\x20%rootclsh% \t\t44 \t0x2C \t4
 if %format%==MS && echo -e BPB_RootClus \t%rootclus% \t\x20\x20%rootclsh% \t\t44 \t0x2C \t4
+if %format%==JL && echo -e %col4%RootDir_1st_Clus %rootclus%\t\x20\x20\x20%rootclsh%\t\t 44\t 0x2C\t 4
 set /A address=%base%+0x30 &; call :read %address% %source% ;; set /A fsinfoh=%result%&0xff &; set /a fsinfo=%fsinfoh%
-if %format%==DEF && echo -e %col3%fsinfo sector \t%fsinfo% \t\x20\x20%fsinfoh% \t\t48 \t0x30 \t2
+if %format%==DEF && echo -e %col3%fsinfo sector \t%fsinfo% \t\x20\x20%fsinfoh% \t\t 48 \t0x30 \t 2
 if %format%==PQ && echo -e %col3%FS Info Sector \t\t%fsinfo% \t\x20\x20%fsinfoh% \t\t48 \t0x30 \t2
 if %format%==MS && echo -e BPB_FSInfo \t%fsinfo% \t\x20\x20%fsinfoh% \t\t48 \t0x30 \t2
+if %format%==JL && echo -e %col3%FSInfo_sector\t %fsinfo%\t\x20\x20\x20%fsinfoh%\t\t 48\t 0x30\t 2
 set /A address=%base%+0x32 &; call :read %address% %source% ;; set /A backsech=%result%&0xff &; set /a backsec=%backsech%
-if %format%==DEF && echo -e %col4%backup sector \t%backsec% \t\x20\x20%backsech% \t\t50 \t0x32 \t2
+if %format%==DEF && echo -e %col4%backup sector \t%backsec% \t\x20\x20%backsech% \t\t 50 \t0x32 \t 2
 if %format%==PQ && echo -e %col4%Backup Boot Sector \t%backsec% \t\x20\x20%backsech% \t\t50 \t0x32 \t2
 if %format%==MS && echo -e BPB_BkBootSec \t%backsec% \t\x20\x20%backsech% \t\t50 \t0x32 \t2
+if %format%==JL && echo -e %col4%Backup_bootsect\t %backsec%\t\x20\x20\x20%backsech%\t\t 50\t 0x32\t 2
 set /A address=%base%+0x34 &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffffffff &; set bpbres0=00000000%bpbresh:~8,2%%%bpbresh:~6,2%%%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres0=%bpbres0:~-8,8%
 set /A address=%base%+0x38 &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffffffff &; set bpbres1=00000000%bpbresh:~8,2%%%bpbresh:~6,2%%%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres1=%bpbres1:~-8,8%
 set /A address=%base%+0x3C &; call :read %address% %source% ;; set /A bpbresh=%result%&0xffffffff &; set bpbres2=00000000%bpbresh:~8,2%%%bpbresh:~6,2%%%bpbresh:~4,2%%%bpbresh:~2,2% &; set bpbres2=%bpbres2:~-8,8%
 set /A bpbresh=%bpbres2%%%bpbres1%%%bpbres0% &; set /a bpbres=%bpbresh%
 if not %bpbresh%<=999999999 && set bpbresh=
-if %format%==DEF && echo -e %col3%reserved \t%bpbres%\t  %bpbresh% \t\t52 \t0x34 \t12 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+if %bpbres%==0 && if %format%==DEF && echo -e %col3%reserved \t12 dup 0\t\t 52 \t0x34 \t12\t$[0x87]must be zero\x20\x20\x20
+if not %bpbres%==0 && if %format%==DEF && echo -e %col3%reserved \t%bpbres%\t  %bpbresh% \t\t52 \t0x34 \t12 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==PQ && echo -e %col3%Reserved \t\t%bpbres%\t  %bpbresh% \t\t52 \t0x34 \t12\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==MS && echo -e BPB_Reserved \t%bpbres%\t  %bpbresh% \t\t52 \t0x34 \t12
+if %format%==JL && echo -e %col3%Unused (0)\t %bpbres%\t\x20\x20\x20%bpbresh%\t\t 52\t 0x34\t 12\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 set /A address=%base%+0x40 &; call :read %address% %source% ;; set /A drvnumh=%result%&0xff &; set /a drivenum=%drvnumh%
-if %format%==DEF && echo -e %col4%drive number \t%drivenum% \t\x20\x20%drvnumh% \t\t64 \t0x40 \t1 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+if %format%==DEF &; if %drivenum%<=0x7E && set "note=removable media" ! if %drivenum%==0x7F && set "note=internal pupose" ! if %drivenum%<=0xFE && set "note=fixed disk\x20\x20\x20\x20\x20" ! if %drivenum%==0xFF && set "note=internal purpose" &; echo -e %col4%drive number \t%drivenum% \t\x20\x20%drvnumh% \t\t 64 \t0x40 \t 1\t$[0x78]%note% && set note=
 if %format%==PQ && echo -e %col4%Drive ID \t\t%drivenum% \t\x20\x20%drvnumh% \t\t64 \t0x40 \t1\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==MS && echo -e BS_DrvNum \t%drivenum% \t\x20\x20%drvnumh% \t\t64 \t0x40 \t1
+if %format%==JL && echo -e %col4%Disk_Number\t %drivenum%\t\x20\x20\x20%drvnumh%\t\t 64\t 0x40\t 1\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 #-# Second header in case of FAT32
 echo -n $[0x0F][Hit Q to quit, any other key to continue] && pause && clear
 if %format%==DEF && call :EchoColor 2 %col1% %col2% 2 &; call :EchoColor 6 %col3% %col4% 0
 if %format%==PQ && call :EchoColor 2 %col1% %col2% 2 &; call :EchoColor 6 %col3% %col4% 0
+if %format%==JL && call :EchoColor 2 %col1% %col2% 2 &; call :EchoColor 6 %col3% %col4% 0
 echo %col1%%%header1% && echo %col2%%%header2%
 set /A address=%base%+0x41 &; call :read %address% %source% ;; set /A rsvrdh=%result%&0xff &; set /a reserved=%rsvrdh%
-if %format%==DEF && echo -e %col3%reserved NT \t%reserved% \t\x20\x20%rsvrdh% \t\t65 \t0x41 \t1
-if %format%==PQ && echo -e %col3%Dirty Flag \t\t%reserved% \t\x20\x20%rsvrdh% \t\t65 \t0x41 \t1
+if %format%==DEF && echo -e %col3%reserved NT \t%reserved% \t\x20\x20%rsvrdh% \t\t 65 \t0x41 \t 1\t$[0x87]flags in win NT
+if %format%==PQ && echo -e %col3%Reserved for NT \t%reserved% \t\x20\x20%rsvrdh% \t\t65 \t0x41 \t1
 if %format%==MS && echo -e BS_Reserved1 \t%reserved% \t\x20\x20%rsvrdh% \t\t65 \t0x41 \t1
+if %format%==JL && echo -e %col3%Dirty_FS_Flag\t %reserved%\t\x20\x20\x20%rsvrdh%\t\t 65\t 0x41\t 1
 set /A address=%base%+0x42 &; call :read %address% %source% ;; set /A extendh=%result%&0xff &; set /a extended=%extendh%
-if %format%==DEF && echo -e %col4%extended \t%extended% \t\x20\x20%extendh% \t\t66 \t0x42 \t1
+if %format%==DEF && echo -e -n %col4%ebpb signature\t%extended% \t\x20\x20%extendh% \t\t 66 \t0x42 \t 1 &; if not %extendh%==0x28 if not %extendh%==0x29 || echo -e $[0x78]\tversion 7.0 ! echo
 if %format%==PQ && echo -e %col4%Extended Boot Sig \t%extended% \t\x20\x20%extendh% \t\t66 \t0x42 \t1
 if %format%==MS && echo -e BS_BootSig \t%extended% \t\x20\x20%extendh% \t\t66 \t0x42 \t1
+if %format%==JL && echo -e %col4%FAT_Signature\t %extended%\t\x20\x20\x20%extendh%\t\t 66\t 0x42\t 1
 set /A address=%base%+0x43 &; call :read %address% %source% ;; set /A uuidh=%result%&0xffffffff &; set uuid=00000000%uuidh:~2% &; set uuidh=0x%uuid:~-8,8%
-if %format%==DEF && echo -e %col3%uuid \t\t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t67 \t0x43 \t4
+if %format%==DEF && echo -e %col3%uuid \t\t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t 67 \t0x43 \t 4
 if %format%==PQ && echo -e %col3%Serial Number \t\t%uuid:~-8,4%%%uuid:~-4,4% \x20%uuidh% \t43 \t0x43 \t4
 if %format%==MS && echo -e BS_VolID \t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t67 \t0x43 \t4
+if %format%==JL && echo -e %col3%Volume_Serial\t %uuid:~-8,4%-%uuid:~-4,4% %uuidh%\t 67\t 0x43\t 4
 set /A address=%base%+0x47 &; raw cat --skip=%address% --length=11 %source% | set label= &; if not exist label && set "label=N/A        "
-if %format%==DEF && echo -e %col4%label \t\t%label% \t\t71 \t0x47 \t11
-if %format%==PQ && echo -e %col4%Volume Name \t\t%label% \t\t47 \t0x47 \t11
+if %format%==DEF && echo -e %col4%label \t\t%label% \t\t 71 \t0x47 \t11
+if %format%==PQ && echo -e %col4%Volume Name \t\t%label% \t\t71 \t0x47 \t11
 if %format%==MS && echo -e BS_VolLab \t%label% \t\t71 \t0x47 \t11
+if %format%==JL && echo -e %col4%Volume_label\t %label%\t\t 71\t 0x47\t 11
 set /A address=%base%+0x52 &; raw cat --skip=%address% --length=8 %source% | set filesys= &; if not exist filesys && set "filesys=N/A     "
-if %format%==DEF && echo -e %col3%file system \t%filesys% \t\t82 \t0x52 \t8 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+if %format%==DEF && echo -e %col3%file system \t%filesys% \t\t 82 \t0x52 \t 8\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==PQ && echo -e %col3%File System ID \t\t%filesys% \t\t82 \t0x52 \t4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==MS && echo -e BS_FilSysType \t%filesys% \t\t82 \t0x52 \t8
+if %format%==JL && echo -e %col3%System_ID\t %filesys%\t\t 82\t 0x52\t 8\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 endlocal
 #-# Switch colors
 set col5=%col3% && set col3=%col4% &; set col4=%col5% && set col5=
 goto :EndOfSector0
-
+::
 :NTFSSpecific
 #-# CHECK for reserved etc!
 setlocal
 set /A address=%base%+0x24 &; call :read %address% %source% ;; set /A unused1h=%result%&0xffffffff &; set unused1h=0x00%unused1h:~2%
 set unused1=%unused1h:~8,2%%%unused1h:~6,2%%%unused1h:~4,2%%%unused1h:~2,2% &; set unused1=%unused1:~-8,8% && set /A unused1h=%unused1h%
-if %format%==DEF && echo -e %col4%unused \t\t%unused1% \x20%unused1h% \t36 \t0x24 \t4
-if %format%==PQ && echo -e %col4%Unused \t\t\t%unused1% \x20%unused1h% \t36 \t0x24 \t4
+if %format%==DEF && echo -e %col4%unused \t\t%unused1% \x20%unused1h% \t 36 \t0x24 \t 4$[0x78]\tnot checked
+#LEFT-OUT#if %format%==PQ && echo -e %col4%Unused \t\t\t%unused1% \x20%unused1h% \t36 \t0x24 \t4
 if %format%==MS && echo -e Reserved \t%unused1% \x20%unused1h% \t36 \t0x24 \t4
-set /A address=%base%+0x28 &; call :read %address% %source% ;; set /A totsecLh=%result% &; set totsecL=0000000%totsecLh:~2% &; set totsecl=%totsecL:~-8,8%
-set /A address=%base%+0x2C &; call :read %address% %source% ;; set /A totsecHh=%result% &; set totsecH=0000000%totsecHh:~2% &; set totsech=%totsecH:~-8,8%
+if %format%==JL && echo -e %col4%Reserved\t %unused1% \x20%unused1h%\t 36\t 0x24\t 4
+set /A address=%base%+0x28 &; call :read %address% %source% ;; set totsecLh=%result% &; set totsecL=00000000%totsecLh:~2% &; set totsecl=%totsecL:~-8,8%
+set /A address=%base%+0x2C &; call :read %address% %source% ;; set /A totsecHh=%result% &; set totsecH=00000000%totsecHh:~2% &; set totsech=%totsecH:~-8,8%
 set /a totsec=0x%totsech%%%totsecl% &; set /A totsech=%totsec%
 call Fn.4 ;; set /a x=%@retval%>>8
 if not %totsech%<=999999999 && set totsech=
-if %format%==DEF && echo -n -e %col3%total sect NTFS %totsec% && call :Fn.5 26 %x% && echo -n %col3%%%totsech% && call :Fn.5 40 %x% && echo -e %col3%%40 \t0x28 \t8
+if %format%==DEF && echo -n -e %col3%total sect NTFS %totsec% && call :Fn.5 26 %x% && echo -n %col3%%%totsech% && call :Fn.5 40 %x% && echo -e %col3% 40 \t0x28 \t 8$[0x87]\t64-bit count
 if %format%==PQ && echo -n -e %col3%Total NTFS Sectors \t%totsec% && call :Fn.5 34 %x% && echo -n %col3%%%totsech% && call :Fn.5 48 %x% && echo -e %col3%%40 \t0x28 \t8
 if %format%==MS && echo -n -e BPB_TotSec64 \t%totsec% && call :Fn.5 26 %x% && echo -n %totsech% && call :Fn.5 40 %x% && echo -e 40 \t0x28 \t8
-set /A address=%base%+0x30 &; call :read %address% %source% ;; set /A mftstrLh=%result% &; set mftstrL=0000000%mftstrLh:~2% &; set mftstrl=%mftstrL:~-8,8%
-set /A address=%base%+0x34 &; call :read %address% %source% ;; set /A mftstrHh=%result% &; set mftstrH=0000000%mftstrHh:~2% &; set mftstrh=%mftstrH:~-8,8%
+if %format%==JL && echo -n -e %col3%Total_Sectors\t %totsec% && call :Fn.5 27 %x% && echo -n %col3%%%totsech% && call :Fn.5 41 %x% && echo -e %col3%%40\t 0x28\t 8
+set /A address=%base%+0x30 &; call :read %address% %source% ;; set /A mftstrLh=%result% &; set mftstrL=00000000%mftstrLh:~2% &; set mftstrl=%mftstrL:~-8,8%
+set /A address=%base%+0x34 &; call :read %address% %source% ;; set /A mftstrHh=%result% &; set mftstrH=00000000%mftstrHh:~2% &; set mftstrh=%mftstrH:~-8,8%
 set /a mftstr=0x%mftstrh%%%mftstrl% &; set /A mftstrh=%mftstr%
 call Fn.4 ;; set /a x=%@retval%>>8
 if not %mftstrh%<=999999999 && set mftstrh=
-if %format%==DEF && echo -n -e %col4%mft start \t%mftstr% && call :Fn.5 26 %x% && echo -n %col4%%%mftstrh% && call :Fn.5 40 %x% && echo -e %col4%%40 \t0x30 \t8
-if %format%==PQ && echo -n -e %col4%MFT Start Cluster \t%mftstr% && call :Fn.5 34 %x% && echo -n %col4%%%mftstrh% && call :Fn.5 48 %x% && echo -e %col4%%40 \t0x30 \t8
-if %format%==MS && echo -n -e BPB_MftClus \t%mftstr% && call :Fn.5 26 %x% && echo -n %mftstrh% && call :Fn.5 40 %x% && echo -e 40 \t0x30 \t8
-set /A address=%base%+0x38 &; call :read %address% %source% ;; set /A mirstrLh=%result% &; set mirstrL=0000000%mirstrLh:~2% &; set mirstrl=%mirstrL:~-8,8%
-set /A address=%base%+0x3C &; call :read %address% %source% ;; set /A mirstrHh=%result% &; set mirstrH=0000000%mirstrHh:~2% &; set mirstrh=%mirstrH:~-8,8%
+if %format%==DEF && echo -n -e %col4%mft start \t%mftstr% && call :Fn.5 26 %x% && echo -n %col4%%%mftstrh% && call :Fn.5 40 %x% && echo -e %col4% 48 \t0x30 \t 8$[0x78]\tcluster number
+if %format%==PQ && echo -n -e %col4%MFT Start Cluster \t%mftstr% && call :Fn.5 34 %x% && echo -n %col4%%%mftstrh% && call :Fn.5 48 %x% && echo -e %col4%%48 \t0x30 \t8
+if %format%==MS && echo -n -e BPB_MftClus \t%mftstr% && call :Fn.5 26 %x% && echo -n %mftstrh% && call :Fn.5 40 %x% && echo -e 48 \t0x30 \t8
+if %format%==JL && echo -n -e %col4%$MFT_LCN\t %mftstr% && call :Fn.5 27 %x% && echo -n %col4%%%mftstrh% && call :Fn.5 41 %x% && echo -e %col4%%48\t 0x30\t 8
+set /A address=%base%+0x38 &; call :read %address% %source% ;; set /A mirstrLh=%result% &; set mirstrL=00000000%mirstrLh:~2% &; set mirstrl=%mirstrL:~-8,8%
+set /A address=%base%+0x3C &; call :read %address% %source% ;; set /A mirstrHh=%result% &; set mirstrH=00000000%mirstrHh:~2% &; set mirstrh=%mirstrH:~-8,8%
 set /a mirstr=0x%mirstrh%%%mirstrl% &; set /A mirstrh=%mirstr%
 call Fn.4 ;; set /a x=%@retval%>>8
 if not %mirstrh%<=999999999 && set mirstrh=
-if %format%==DEF && echo -n -e %col3%mirror start \t%mirstr% && call :Fn.5 26 %x% && echo -n %col3%%%mirstrh% && call :Fn.5 40 %x% && echo -e %col3%%40 \t0x38 \t8
-if %format%==PQ && echo -n -e %col3%MFT Mirror Start Clustr %mirstr% && call :Fn.5 34 %x% && echo -n %col3%%%mirstrh% && call :Fn.5 48 %x% && echo -e %col3%%40 \t0x38 \t8
-if %format%==MS && echo -n -e BPB_MirClus \t%mirstr% && call :Fn.5 26 %x% && echo -n %mirstrh% && call :Fn.5 40 %x% && echo -e 40 \t0x38 \t8
-set /A address=%base%+0x40 &; call :read %address% %source% ;; set /A clusfrsh=%result%&0xffff &; set /a cluspfrs=%clusfrsh%
-if %format%==DEF && echo -e %col4%cluster/FRS \t%cluspfrs% \t\x20\x20%clusfrsh% \t\t64 \t0x40 \t4
-if %format%==PQ && echo -e %col4%Clusters per FRS \t%cluspfrs% \t\x20\x20%clusfrsh% \t\t64 \t0x40 \t4
-if %format%==MS && echo -e BPB_ClusPerMft \t%cluspfrs% \t\x20\x20%clusfrsh% \t\t64 \t0x40 \t4
-set /A address=%base%+0x44 &; call :read %address% %source% ;; set /A cluspibh=%result%&0xff &; set cluspibl=%cluspibh:~2%
-if %format%==DEF && echo -e %col3%cluster/IBL \t%cluspibl% \t\x20\x20%cluspibh% \t\t68 \t0x44 \t1
+if %format%==DEF && echo -n -e %col3%mirror start \t%mirstr% && call :Fn.5 26 %x% && echo -n %col3%%%mirstrh% && call :Fn.5 40 %x% && echo -e %col3% 56 \t0x38 \t 8$[0x87]\tcluster number
+if %format%==PQ && echo -n -e %col3%MFT Mirror Start Clustr %mirstr% && call :Fn.5 34 %x% && echo -n %col3%%%mirstrh% && call :Fn.5 48 %x% && echo -e %col3%%56 \t0x38 \t8
+if %format%==MS && echo -n -e BPB_MirClus \t%mirstr% && call :Fn.5 26 %x% && echo -n %mirstrh% && call :Fn.5 40 %x% && echo -e 56 \t0x38 \t8
+if %format%==JL && echo -n -e %col3%$MFTMirr_LCN\t %mirstr% && call :Fn.5 27 %x% && echo -n %col3%%%mirstrh% && call :Fn.5 41 %x% && echo -e %col3%%56\t 0x38\t 8
+set /A address=%base%+0x40 &; call :read %address% %source% ;; set /A clusfrsh=%result%&0xffff &; set /a cluspfrs=%clusfrsh% &; if %cluspfrs%>=0x80 && set /a cluspfrs=%cluspfrs%-0x100
+if %format%==DEF && if not %cluspfrs%<=-1 && echo -e -n %col4%clus/mft record %cluspfrs% \t\x20\x20%clusfrsh% \t\t 64 \t0x40 \t 1 && echo -e $[0x78]\tclusters/record
+if %format%==DEF && if %cluspfrs%<=-1 && set /a cluspfrs=-1 * %cluspfrs% &; set /a cluspfrs=1<<%cluspfrs% &; echo -e -n %col4%byte/mft record %cluspfrs% \t\x20\x20%clusfrsh% \t\t 64 \t0x40 \t 1 && echo -e $[0x78]\t%bytes%
+if %format%==PQ && echo -e %col4%Clusters per FRS \t%cluspfrs% \t\x20\x20%clusfrsh% \t\t64 \t0x40 \t1
+if %format%==MS && echo -e BPB_ClusPerMft \t%cluspfrs% \t\x20\x20%clusfrsh% \t\t64 \t0x40 \t1
+if %format%==JL && if not %cluspfrs%<=-1 && echo -e %col4%Clusts/$MFT_Rec. %cluspfrs%\t\x20\x20\x20%clusfrsh%\t\t 64\t 0x40\t 1
+if %format%==JL && if %cluspfrs%<=-1 && set /a cluspfrs=-1 * %cluspfrs% &; set /a cluspfrs=1<<%cluspfrs% &; echo -e %col4%Bytes/$MFT_Rec.\t %cluspfrs%\t\x20\x20\x20%clusfrsh%\t\t 64\t 0x40\t 1
+set /A address=%base%+0x44 &; call :read %address% %source% ;; set /A cluspibh=%result%&0xff &; set /a cluspibl=%cluspibh% &; if %cluspibl%>=0x80 && set /a cluspibl=%cluspibl%-0x100
+if %format%==DEF && if not %cluspibl%<=-1 && echo -e -n %col3%clus/index buf \t%cluspibl% \t\x20\x20%cluspibh% \t\t 68 \t0x44 \t 1 && echo -e $[0x87]\tclusters/record
+if %format%==DEF && if %cluspibl%<=-1 && set /a cluspibl=-1 * %cluspibl% &; set /a cluspibl=1<<%cluspibl% &; echo -e -n %col3%clus/index buf \t%cluspibl% \t\x20\x20%cluspibh% \t\t 68 \t0x44 \t 1 && echo -e $[0x87]\t%bytes%
 if %format%==PQ && echo -e %col3%Clusters pr Index Block %cluspibl% \t\x20\x20%cluspibh% \t\t68 \t0x44 \t1
 if %format%==MS && echo -e BPB_ClusPerIndx %cluspibl% \t\x20\x20%cluspibh% \t\t68 \t0x44 \t1
+if %format%==JL && if not %cluspibl%<=-1 && echo -e %col3%Clusts/$MFT_Ind. %cluspibl%\t\x20\x20\x20%cluspibh%\t\t 68\t 0x44\t 1
+if %format%==JL && if %cluspibl%<=-1 && set /a cluspibl=-1 * %cluspibl% &; set /a cluspibl=1<<%cluspibl% &; echo -e %col3%Bytes/$MFT_Ind.\t %cluspibl%\t\x20\x20\x20%cluspibh%\t\t 68\t 0x44\t 1
 set /A address=%base%+0x48 &; call :read %address% %source% &; set /A serialhl=%result%&0xffffffff &; set /A address=%base%+0x4C &; call :read %address% %source% &; set /A serialhh=%result%&0xffffffff &; set serial=000000000000000%serialhh:~2%%%serialhl:~2% &; set serial=%serial:~-16,16%
 call Fn.4 ;; set /a x=%@retval%>>8
-if %format%==DEF && echo -n -e %col4%uuid \t\t%serial% && call :Fn.5 40 %x% && echo -e %col4%%72 \t0x48 \t8
+if %format%==DEF && echo -n -e %col4%uuid \t\t%serial% && call :Fn.5 40 %x% && echo -e %col4% 72 \t0x48 \t 8
 if %format%==PQ && echo -n -e %col4%Serial Number \t\t%serial% && call :Fn.5 48 %x% && echo -e %col4%%72 \t0x48 \t8
 if %format%==MS && echo -n -e BS_VolID \t%serial% && call :Fn.5 40 %x% && echo -e 72 \t0x48 \t8
+if %format%==JL && echo -n -e %col4%Volume_Serial\t %serial% && call :Fn.5 41 %x% && echo -e %col4%%72\t 0x48\t 8
 set /A address=%base%+0x50 &; call :read %address% %source% ;; set /A checksuh=%result%&0xffffffff &; set /a checksum=%checksuh%
-if %format%==DEF && echo -e %col3%checksum \t%checksum% \t\x20\x20%checksuh% \t\t80 \t0x50 \t4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+if %format%==DEF && echo -e %col3%checksum \t%checksum% \t\x20\x20%checksuh% \t\t 80 \t0x50 \t 4$[0x87]\tnot used\x20\x20\x20\x20\x20\x20\x20
 if %format%==PQ && echo -e %col3%Checksum \t\t%checksum% \t\x20\x20%checksuh% \t\t80 \t0x50 \t4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==MS && echo -e BS_ChkSum \t%checksum% \t\x20\x20%checksuh% \t\t80 \t0x50 \t4
+if %format%==JL && echo -e %col3%Checksum\t %checksum%\t\x20\x20\x20%checksuh%\t\t 80\t 0x50\t 4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 endlocal
 #-# Switch colors
 set col5=%col3% && set col3=%col4% &; set col4=%col5% && set col5=
 goto :EndOfSector0
-
+::
 :EXFATSpecific
 setlocal
 set format=DEF
-if %format%==DEF && echo -e entry \t\t\tvalue \t\x20\x20(hex) \toffset \t(hex) \tbyte(s) | set header2= &; echo -e %col2%%%header2%\x20\x20\x20\x20\x20\x20\x20\x20
-if %format%==DEF && echo -e %col3%jump \t\t\t%jump% \x20\x20\x20%jumph% \t0 \t0x0 \t3
+if %format%==DEF && echo -e entry (All)\t\t\tvalue\t\x20\x20(hex)\t\toffset\t(hex)\tbyte(s) | set header2= &; echo -e %col2%%%header2%
+if %format%==DEF && echo -e %col3%Jump Instruction\t\t%jump% \x20\x20\x20%jumph%\t  0\t0x0\t 3
 set /A address=%base%+3 &; raw cat --skip=%address% --length=8 %source% | set oemname= &; if not exist oemname && set "oemname=N/A     "
-if %format%==DEF && echo -e %col4%FileSystemName \t\t%oemname% \t\t3 \t0x3 \t8
+if %format%==DEF && echo -e %col4%File System Name\t\t%oemname%\t\t  3\t0x3\t 8
 if %format%==PQ && echo -e %col4%OEM name \t\t%oemname% \t\t3 \t0x3 \t8
 if %format%==MS && echo -e BS_OEMname \t%oemname% \t\t3 \t0x3 \t8
-set /A address=%base%+11 &; raw cat --skip=%address% --locate=\x00 --length=53 %source% > nul || clear && echo exFAT bootsector is invalid && endlocal && goto :eof
-set /A address=%base%+0x40 &; call :read %address% %source% ;; set /A poffsetL=%result%&0xffffffff
-set /A address=%base%+0x44 &; call :read %address% %source% ;; set /A poffsetH=%result%&0xffffffff &; set poffseth=00000000%poffsetH:~2%%%poffsetL:~2% &; set poffseth=0x%poffseth:~-8,8% &; set /a ptoffset=%poffseth% &; set /A poffseth=%poffseth%
-if not %ptoffset%<=999999999 && set poffseth=
-if %poffseth%<=0xFF && if %format%==DEF && echo -e %col3%PartitionOffset \t%ptoffset% \t\x20\x20%poffseth% \t\t64 \t0x40 \t8
-if not %poffseth%<=0xFF && if %format%==DEF && echo -e %col3%PartitionOffset \t%ptoffset% \t\x20\x20%poffseth% \t64 \t0x40 \t8
-set /A address=%base%+0x48 &; call :read %address% %source% ;; set /A vollenL=%result%&0xffffffff
-set /A address=%base%+0x4C &; call :read %address% %source% ;; set /A vollenH=%result%&0xffffffff &; set vollenh=00000000%vollenH:~2%%%vollenL:~2% &; set vollenh=0x%vollenh:~-8,8% &; set /a vollen=%vollenh% &; set /A vollenh=%vollenh%
+set /A address=%base%+11 &; raw cat --skip=%address% --locate=\x00 --length=53 %source% > nul ;; if %@retval%==53 && if %format%==DEF && echo -e %col3%Reserved\t\t\t53 dup 0\t\t 11 \t0xB\t53 ! if %format%==DEF && echo -e %col3%Reserved\t\t\tINVALID!\t\t 11 \t0xB\t53
+#ORG#set /A address=%base%+11 &; raw cat --skip=%address% --locate=\x00 --length=53 %source% > nul || clear && echo exFAT bootsector is invalid && endlocal && goto :eof
+#ORG#if %format%==DEF && echo -e %col3%Reserved\t\t\t53 dup 0\t\t 11 \t0xB\t53
+set /A address=%base%+0x40 &; call :read %address% %source% ;; set poffsetL=%result%
+set /A address=%base%+0x44 &; call :read %address% %source% ;; set /A poffsetH=%result%&0xffffffff &; set poffseth=0000000000000000%poffsetH:~2%%%poffsetL:~2% &; set poffseth=0x%poffseth:~-16,16% &; set /a ptoffset=%poffseth% &; set /A poffseth=%poffseth%
+if %poffseth%<=0xFF && if %format%==DEF && echo -e %col4%Partition Offset\t\t%ptoffset%\t\x20\x20%poffseth%\t\t 64\t0x40\t 8
+if not %poffseth%<=0xFF && if %ptoffset%<=99999999 && if %format%==DEF && echo -e %col4%Partition Offset\t\t%ptoffset%\t\x20\x20%poffseth%\t 64\t0x40\t 8
+if not %poffseth%<=0xFF && if not %ptoffset%<=99999999 && if %format%==DEF && echo -e %col4%Partition Offset\t\t%ptoffset%\t 64\t0x40\t 8
+set /A address=%base%+0x48 &; call :read %address% %source% ;; set vollenL=%result%
+set /A address=%base%+0x4C &; call :read %address% %source% ;; set /A vollenH=%result%&0xffffffff &; set vollenh=0000000000000000%vollenH:~2%%%vollenL:~2% &; set vollenh=0x%vollenh:~-16,16% &; set /a vollen=%vollenh% &; set /A vollenh=%vollenh%
 if not %vollen%<=999999999 && set vollenh=
-if %format%==DEF && echo -e %col4%VolumeLength \t\t%vollen% \x20\x20%vollenh% \t72 \t0x48 \t8
+if %vollen%<=99999999 && if %format%==DEF && echo -e %col3%Volume Length\t\t\t%vollen%\t\x20\x20%vollenh%\t 72\t0x48\t 8
+if not %vollen%<=99999999 && if %format%==DEF && echo -e %col3%Volume Length\t\t\t%vollen%\t 72\t0x48\t 8
 set /A address=%base%+0x50 &; call :read %address% %source% ;; set /A foffseth=%result%&0xffffffff &; set foffseth=0000%foffseth:~2% &; set foffseth=0x%foffseth:~-4,4% &; set /a ftoffset=%foffseth% &; set /A foffseth=%foffseth%
-if %foffseth%<=0xFF && if %format%==DEF && echo -e %col3%FatOffset \t\t%ftoffset% \t\x20\x20%foffseth% \t\t80 \t0x50 \t4
-if not %foffseth%<=0xFF && if %format%==DEF && echo -e %col3%FatOffset \t\t%ftoffset% \t\x20\x20%foffseth% \t80 \t0x50 \t4
-set /A address=%base%+0x54 &; call :read %address% %source% ;; set /A fatlenh=%result%&0xffffffff &; set fatlenh=0000%fatlenh:~2% &; set fatlenh=0x%foffseth:~-4,4% &; set /a fatlen=%fatlenh% &; set /A fatlenh=%fatlenh%
-if %fatlenh%<=0xFF && if %format%==DEF && echo -e %col4%FatLength \t\t%fatlen% \t\x20\x20%fatlenh% \t\t84 \t0x54 \t4
-if not %fatlenh%<=0xFF && if %format%==DEF && echo -e %col4%FatLength \t\t%fatlen% \t\x20\x20%fatlenh% \t84 \t0x54 \t4
+if %foffseth%<=0xFF && if %format%==DEF && echo -e %col4%Fat Offset\t\t\t%ftoffset%\t\x20\x20%foffseth%\t\t 80\t0x50\t 4
+if not %foffseth%<=0xFF && if %format%==DEF && echo -e %col4%Fat Offset\t\t\t%ftoffset%\t\x20\x20%foffseth%\t 80\t0x50\t 4
+set /A address=%base%+0x54 &; call :read %address% %source% ;; set /A fatlenh=%result%&0xffffffff &; set fatlenh=0000%fatlenh:~2% &; set fatlenh=0x%fatlenh:~-4,4% &; set /a fatlen=%fatlenh% &; set /A fatlenh=%fatlenh%
+if %fatlenh%<=0xFF && if %format%==DEF && echo -e %col3%Fat Length\t\t\t%fatlen%\t\x20\x20%fatlenh%\t\t 84\t0x54\t 4
+if not %fatlenh%<=0xFF && if %format%==DEF && echo -e %col4%Fat Length\t\t\t%fatlen%\t\x20\x20%fatlenh%\t 84\t0x54\t 4
 set /A address=%base%+0x58 &; call :read %address% %source% ;; set /A coffseth=%result%&0xffffffff &; set coffseth=0000%coffseth:~2% &; set coffseth=0x%coffseth:~-4,4% &; set /a choffset=%coffseth% &; set /A coffseth=%coffseth%
-if %coffseth%<=0xFF && if %format%==DEF && echo -e %col3%ClusterHeapOffset \t%choffset% \t\x20\x20%coffseth% \t\t88 \t0x58 \t4
-if not %coffseth%<=0xFF && if %format%==DEF && echo -e %col3%ClusterHeapOffset \t%choffset% \t\x20\x20%coffseth% \t88 \t0x58 \t4
+if %coffseth%<=0xFFF && if %format%==DEF && echo -e %col4%Cluster Heap Offset\t\t%choffset%\t\x20\x20%coffseth%\t\t 88\t0x58\t 4
+if not %coffseth%<=0xFFF && if %format%==DEF && echo -e %col4%Cluster Heap Offset\t\t%choffset%\t\x20\x20%coffseth%\t 88\t0x58\t 4
 set /A address=%base%+0x5C &; call :read %address% %source% ;; set /A clcounth=%result%&0xffffffff &; set clcounth=0000%clcounth:~2% &; set clcounth=0x%clcounth:~-4,4% &; set /a clcount=%clcounth%
-if %format%==DEF && echo -e %col4%ClusterCount \t\t%clcount% \t\x20\x20%clcounth% \t92 \t0x5C \t4
+if %format%==DEF && echo -e %col3%Cluster Count\t\t\t%clcount%\t\x20\x20%clcounth%\t 92\t0x5C\t 4
 set /A address=%base%+0x60 &; call :read %address% %source% ;; set /A rdclush=%result%&0xffffffff &; set rdclush=0000%rdclush:~2% &; set rdclush=0x%rdclush:~-4,4% &; set /a rdclus=%rdclush% &; set /A rdclush=%rdclush%
-if %rdclush%<=0xFF && if %format%==DEF && echo -e %col3%RootDirectoryCluster \t%rdclus% \t\x20\x20%rdclush% \t\t96 \t0x60 \t4
-if not %rdclush%<=0xFF && if %format%==DEF && echo -e %col3%RootDirectoryCluster \t%rdclus% \t\x20\x20%rdclush% \t96 \t0x60 \t4
+if %rdclush%<=0xFF && if %format%==DEF && echo -e %col4%First Cluster of Root Directory %rdclus%\t\x20\x20%rdclush%\t\t 96\t0x60\t 4
+if not %rdclush%<=0xFF && if %format%==DEF && echo -e %col4%First Cluster of Root Directory %rdclus%\t\x20\x20%rdclush%\t 96\t0x60\t 4
 set /A address=%base%+0x64 &; call :read %address% %source% ;; set /A uuidh=%result%&0xffffffff &; set uuidh=00000000%uuidh:~2% &; set uuidh=0x%uuidh:~-8,8% &; set uuid=%uuidh:~2,4%-%uuidh:~6,4%
-if %format%==DEF && echo -e %col4%VolumeSerialNumber \t%uuid% %uuidh% \t100 \t0x64 \t4
-set /A address=%base%+0x68 &; call :read %address% %source% ;; set /A fsrevh=%result%&0xffff &; set fsrevh=0000%fsrevh:~2% &; set fsrevh=0x%fsrevh:~-4,4% &; set /a fsrev=%fsrevh% &; set /A fsrevh=%fsrevh%
-if %fsrevh%<=0xFF && if %format%==DEF && echo -e %col3%FileSystemRevision \t%fsrev% \t\x20\x20%fsrevh% \t\t104 \t0x68 \t2
-if not %fsrevh%<=0xFF && if %format%==DEF && echo -e %col3%FileSystemRevision \t%fsrev% \t\x20\x20%fsrevh% \t104 \t0x68 \t2
+if %format%==DEF && echo -e %col3%Volume Serial Number\t\t%uuid% %uuidh%\t100\t0x64\t 4
+set /A address=%base%+0x68 &; call :read %address% %source% ;; set /A fsrevh=%result%&0xffff &; set fsrevh=0000%fsrevh:~2% &; set fsrevh=0x%fsrevh:~-4,4% &; set fsrev=%fsrevh:~2,2%:%fsrevh:~4,2% &; set /A fsrevh=%fsrevh%
+if %fsrevh%<=0xFF && if %format%==DEF && echo -e %col4%File System Revision\t\t%fsrev%\t\x20\x20%fsrevh%\t\t104\t0x68\t 2
+if not %fsrevh%<=0xFF && if %format%==DEF && echo -e %col4%File System Revision\t\t%fsrev%\t\x20\x20%fsrevh%\t\t104\t0x68\t 2
 set /A address=%base%+0x6A &; call :read %address% %source% ;; set /A volflagh=%result%&0xffff &; set volflagh=0000%volflagh:~2% &; set volflagh=0x%volflagh:~-4,4% &; set /a volflag=%volflagh%
-if %format%==DEF && echo -e %col4%VolumeFlags \t\t%volflag% \t\x20\x20%volflagh% \t106 \t0x6A \t2
+if %format%==DEF && echo -e %col3%Volume Flags\t\t\t%volflag%\t\x20\x20%volflagh%\t106\t0x6A\t 2
 set /A address=%base%+0x6C &; call :read %address% %source% ;; set /A bytpssh=%result%&0xff &; set bytpssh=00%bytpssh:~2% &; set bytpssh=0x%bytpssh:~-2,2% &; set /a bytpss=%bytpssh% &; set /A bytpssh=%bytpssh%
-if %format%==DEF && echo -e %col3%BytesPerSectorShift \t%bytpss% \t\x20\x20%bytpssh% \t\t108 \t0x6C \t1
+if %format%==DEF && echo -e %col4%Bytes Per Sector Shift\t\t%bytpss%\t\x20\x20%bytpssh%\t\t108\t0x6C\t 1
 set /A address=%base%+0x6D &; call :read %address% %source% ;; set /A secpcsh=%result%&0xff &; set secpcsh=00%secpcsh:~2% &; set secpcsh=0x%secpcsh:~-2,2% &; set /a secpcs=%secpcsh% &; set /A secpcsh=%secpcsh%
-if %format%==DEF && echo -e %col4%SectorsPerClusterShift \t%secpcs% \t\x20\x20%secpcsh% \t\t109 \t0x6D \t1
+if %format%==DEF && echo -e %col3%Sectors Per Cluster Shift\t%secpcs%\t\x20\x20%secpcsh%\t\t109\t0x6D\t 1
 set /A address=%base%+0x6E &; call :read %address% %source% ;; set /A numfatsh=%result%&0xff &; set numfatsh=00%numfatsh:~2% &; set numfatsh=0x%numfatsh:~-2,2% &; set /a numfats=%numfatsh% &; set /A numfatsh=%numfatsh%
-if %format%==DEF && echo -e %col3%NumberOfFats \t\t%numfats% \t\x20\x20%numfatsh% \t\t110 \t0x6E \t1
+if %format%==DEF && echo -e %col4%Number of FATs\t\t\t%numfats%\t\x20\x20%numfatsh%\t\t110\t0x6E\t 1
 set /A address=%base%+0x6F &; call :read %address% %source% ;; set /A drvselh=%result%&0xff &; set drvselh=00%drvselh:~2% &; set drvselh=0x%drvselh:~-2,2% &; set /a drvsel=%drvselh%
-if %format%==DEF && echo -e %col4%DriveSelect \t\t%drvsel% \t\x20\x20%drvselh% \t\t111 \t0x6F \t1
+if %format%==DEF && echo -e %col3%Drive Select\t\t\t%drvsel%\t\x20\x20%drvselh%\t\t111\t0x6F\t 1
 set /A address=%base%+0x70 &; call :read %address% %source% ;; set /A percuseh=%result%&0xff &; set percuseh=00%percuseh:~2% &; set percuseh=0x%percuseh:~-2,2% &; set /a percuse=%percuseh% &; set /A percuseh=%percuseh%
-if %format%==DEF && echo -e %col3%PercentInUse \t\t%percuse% \t\x20\x20%percuseh% \t\t112 \t0x70 \t1
-set /A address=%base%+0x71 &; call :read %address% %source% ;; set /A reservL=%result%&0xffffffff
-set /A address=%base%+0x75 &; call :read %address% %source% ;; set /A reservH=%result%&0xffffff &; set reservh=0000000%reservH:~2%%%reservL:~2% &; set reservh=0x%reservh:~-7,7% &; set /a reserv=%reservh%
-if %format%==DEF && echo -e %col4%Reserved \t\t%reserv% \t\x20\x20%reservh% \t113 \t0x71 \t7
+if %format%==DEF && echo -e %col4%Percent in Use\t\t\t%percuse%\t\x20\x20%percuseh%\t\t112\t0x70\t 1
+set /A address=%base%+0x71 &; call :read %address% %source% ;; set reservL=%result%
+set /A address=%base%+0x75 &; call :read %address% %source% ;; set /A reservH=%result%&0xffffff &; set reservh=00000000000000%reservH:~2%%%reservL:~2% &; set /A reservh=0x%reservh:~-14,14% &; set /a reserv=%reservh%
+if %reserv%<=99999999 && if %format%==DEF && echo -e %col3%Reserved\t\t\t%reserv%\t\x20\x20%reservh%\t\t113\t0x71\t 7
+if not %reserv%<=99999999 && if %format%==DEF && echo -e %col3%Reserved\t\t\t%reserv%\t113\t0x71\t 7
 endlocal
 #-# NOT switch colors
 #OLD#set col5=%col3% && set col3=%col4% &; set col4=%col5% && set col5=
 goto :EndOfSector0
-
+::
 :EndOfSector0
 set /A address=%base%+0x1FE &; call :read %address% %source% ;; set /A magicbth=%result%&0xffff &; set magicbyt=%magicbth:~-2,2%%%magicbth:~-4,2%
-if not %pbrtype%==exFAT && if %format%==DEF && echo -e %col3%boot signature \t%magicbyt% \t\x20\x20%magicbth% \t510 \t0x1FE \t2 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-if %pbrtype%==exFAT && if %format%==DEF && echo -e %col3%BootSignature \t\t%magicbyt% \t\x20\x20%magicbth:~0,6% \t510 \t0x1FE \t2 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-if not %pbrtype%==exFAT && if %format%==PQ && echo -e %col3%Signature \t\t%magicbyt% \t\x20\x20%magicbth% \t508 \t0x1FC \t4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-if %pbrtype%==exFAT && if %format%==PQ && echo -e %col3%BootSignature \t\t%magicbth:~2,4% \t\x20\x20%magicbth:~0,6% \t510 \t0x1FE \t2\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-if %pbrtype%==exFAT && if %format%==MS && echo -e BootSignature \t\t%magicbyt% \t\x20\x20%magicbth% \t508 \t0x1FC \t4
+if not %pbrtype%==FAT12 if not %pbrtype%==FAT16 || if %format%==DEF && echo -e %col3%boot signature \t%magicbyt% \t\x20\x20%magicbth% \t510 \t0x1FE \t 2$[0x87]\talways 55h,AAh\x20
+if not %pbrtype%==FAT32 if not %pbrtype%==NTFS || if %format%==DEF && echo -e %col3%boot signature \t%magicbyt% \t\x20\x20%magicbth% \t510 \t0x1FE \t 2$[0x78]\talways 55h,AAh\x20
+###zero \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+if %pbrtype%==exFAT && if %format%==DEF && echo -e %col4%Boot Signature\t\t\t%magicbyt%\t\x20\x20%magicbth:~0,6%\t510\t0x1FE\t 2\x20\x20\x20\x20
+if not %pbrtype%==exFAT && if %format%==PQ && echo -e %col3%Signature \t\t%magicbyt% \t\x20\x20%magicbth% \t510 \t0x1FE \t2\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+if %pbrtype%==exFAT && if %format%==PQ && echo -e %col4%Boot Signature\t\t\t%magicbyt%\t\x20\x20%magicbth:~0,6%\t510\t0x1FE \t 2\x20\x20\x20\x20\x20
+if %pbrtype%==exFAT && if %format%==MS && echo -e Boot Signature\t\t\t%magicbyt%\t\x20\x20%magicbth%\t510\t0x1FE\t 2
 if not %pbrtype%==exFAT && if %format%==MS && echo -e BS_Signature \t%magicbyt% \t\x20\x20%magicbth:~0,6% \t510 \t0x1FE \t2
+if not %pbrtype%==exFAT && if %format%==JL && echo -e %col3%Magic_bytes\t %magicbyt% \t\x20\x20\x20%magicbth% \t 510 \t 0x1FE \t 2\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+if %pbrtype%==exFAT && if %format%==JL && echo -e %col4%Boot Signature\t\t\t%magicbyt%\t\x20\x20%magicbth:~0,6%\t510\t0x1FE \t 2\x20\x20\x20\x20\x20
 goto :eov
-if not %pbrtype%==FAT12 if not %pbrtype%==FAT16 || goto :eov
-if %pbrtype%==NTFS && goto :eov
-if %pbrtype%==exFAT && goto :eov
-#-# Start with FAT32 FSINFO-sector
-set /a skip=%skip%+1
-echo
-if not exist file && echo -e %pbrtype% Partition Boot Record %DEVICE% FSINFO sector %skip% | set header1= &; echo $[0x07]%header1%
-if exist file && echo -e %pbrtype% Partition Boot Record %source% (sector %skip%) | set header1= &; echo $[0x07]%header1%
-if %format%==DEF && echo -e entry \t\tvalue \t(hex) \t\toffset \t(hex) \tbyte(s) | set header2= &; echo $[0x08]%header2%
-if %format%==MS && echo -e entry (%format%) \tvalue \t\x20\x20(hex) \toffset \t(hex) \tbyte(s) | set header2= &; echo $[0x08]%header2%
-:EndOfSector1
-set /A address=%Maddress%+0x3FC &; read %address% ;; set /A magicbth=%@retval%&0xffffffff &; set magicbyt=%magicbth:~-2,2%%%magicbth:~-4,2%%%magicbth:~-6,2%%%magicbth:~-8,2%
-if %format%==DEF && echo -e %col3%Magic Byte \t%magicbyt% \x20%magicbth% \t508 \t0x1FC \t4 \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-if %format%==PQ && echo -e %col3%Signature \t\t%magicbth:~2,4% \t\x20\x20%magicbth% \t508 \t0x1FC \t4
-if %format%==MS && echo -e BS_TrailSig \t%magicbyt:~4% \t\x20\x20%magicbth% \t508 \t0x1FC \t4
-goto :eov
-
+::
 :eov
 if %pagersts%==1 && pager on > nul ! pager off > nul
 debug %debugsts% > nul
@@ -417,7 +480,7 @@ if exist skipEB &; raw cat --skip=%skipEB% --locate=\x90 --length=1 %source% > n
 if not exist BLOCK && echo No FAT/FAT32/NTFS/exFAT Partition Boot Record EBxx90 jump in %source% ! echo No FAT/FAT32/NTFS/exFAT Partition Boot Record EBxx90 jump in %BLOCK%
 endlocal && set result=
 goto :eof
-
+::
 :EchoColor
 #-#+ EchoColor <number 0f empty colored lines> <colorA> <colorB> <start line number>
 #-# Colors must be defined before!
@@ -436,11 +499,11 @@ if not %c%>=%~1 && goto :LoopEchoColor
 call Fn.5 0 %~4
 endlocal
 goto :eof
-
+::
 :Fn.5
 call Fn.5 %~1 %~2
 goto :eof
-
+::
 :read
 #-#+ Function: read 4 bytes in litte endian order from disk and return as hex
 #-# Use: call :read ADDRESS FILE
@@ -449,30 +512,36 @@ raw cat --hex --skip=%~1 --length=4 %~2 | set LE=
 set "LE=%LE:~10,11%" &; if not "%LE:~9,1%"==" " && set result=0x%LE:~9,2%%%LE:~6,2%%%LE:~3,2%%%LE:~0,2% ! if not "%LE:~6,1%"==" " && set result=0x%LE:~6,2%%%LE:~3,2%%%LE:~0,2% ! if not "%LE:~3,1%"==" " && set result=0x%LE:~3,2%%%LE:~0,2% ! if not "%LE:~0,1%"==" " && set result=0x%LE:~0,2%
 endlocal && set result=%result%
 goto :eof
-
+::
+:mediabits
+set /a bit0=%~1>>0&1 && set /a bit1=%~1>>1&1 && set /a bit2=%~1>>2&1 && set /a bit3=%~1>>3&1 && set /a bit7=%~1>>7&1
+goto :eof
+::
 :help
-echo PBRVIEW.G4B v0.1 (20231015), by deomsh
-echo Function: display Partition Boot Record on FAT, NTFS or exFAT
-echo PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/MS|/PQ]
+echo PBRVIEW.G4B v0.2 (20231102), by deomsh
+echo Function: display FAT12/16, FAT32, NTFS or exFAT Partition Boot Record
+echo PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/MS|/PQ|/JL]
 echo Optional: --start=N|--skip=n|--force=N: N/n is starting sector/byte (0-N/n)
-echo $[] Use if no partition is given: image-file, disk or blocklist
-echo Optional: /MS|/PQ for Microsoft or PowerQuest style
+echo $[] If no partition is given use image-file, disk or blocklist
+echo Optional: /MS|/PQ|/JL for Microsoft, PowerQuest or Jaclaz names
 echo Remarks: 
 echo FILE can be a blocklist too
 echo With --start/--force N sector number is in 512 byte units
-echo $[] With --start/--skip/--force filesystem derived from jump-code only
-echo $[] First 4MB is searched for EBxx90 (0x2000 512 byte sectors)
-echo In case of exFAT switch /MS or /PQ changes colors only
-echo Unlock line 26 to change default colors to blue
+echo $[] With --start/--skip/--force filesystem derived from jump-code
+echo $[] First 4MB is searched for EBxx90 (0x2000 sectors in 512 byte sectors)
+echo In case of exFAT: switch /MS, /PQ or /JL changes colors only
+echo Unlock line 28 to change default colors to blue
+echo Text mode of grub4efi not supported, use some graphics mode
 echo Example: PBRVIEW.G4B (hd0,0)
-echo Example: PBRVIEW.G4B (fd0) /ms
-echo Example: PBRVIEW.G4B (rd) /pq
+echo Example: PBRVIEW.G4B (fd0) /MS
+echo Example: PBRVIEW.G4B (rd) /PQ
+echo Example: PBRVIEW.G4B (hd0) /JL
 echo Example: PBRVIEW.G4B --start=63 (hd0)
 echo Example: PBRVIEW.G4B (hd0,0)/FATIMAGE.IMG
-echo Example: PBRVIEW.G4B --start=1008 (hd1,0)/FATIMAGE.IMG
+#ORG#echo Example: PBRVIEW.G4B --start=1008 (hd1,0)/FATIMAGE.IMG
 echo Example: PBRVIEW.G4B --force=1008 (hd1,0)/FATIMAGE.IMG
 echo Example: PBRVIEW.G4B --skip=0x3F0 (hd1,0)/FATIMAGE.IMG
-echo Example: PBRVIEW.G4B --start=6 (hd0,0) /ms
+#ORG#echo Example: PBRVIEW.G4B --start=6 (hd0,0) /MS
 echo Example: PBRVIEW.G4B --skip=0x7E00 (cd)0+0x800
 echo Example: PBRVIEW.G4B (0xe0)0x567+1
 goto :eof
