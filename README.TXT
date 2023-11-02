@@ -10,7 +10,7 @@ With --start/--force N sector number is in 512 byte units
  With --start/--skip/--force filesystem derived from jump-code only
  First 4MB is searched for EBxx90 (0x2000 sectors in 512 byte sectors)
 In case of exFAT: switch /MS, /PQ or /JL changes colors only
-Unlock line 28 to change default colors to blue
+Unlock line 29 to change default colors to blue
 Text mode of grub4efi not supported, use some graphics mode
 Example: PBRVIEW.G4B (hd0,0)
 Example: PBRVIEW.G4B (fd0) /MS
