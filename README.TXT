@@ -29,6 +29,7 @@ Bug fixes
 Added switch with 'Good names' of Jaclaz/ Wonko the Sane
 Update of exFAT names
 Added notes in Default view (except exFAT)
+Exit in case of grub4efi text mode
 
 Version 0.1
 First published version
