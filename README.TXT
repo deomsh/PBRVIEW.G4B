@@ -31,7 +31,7 @@ Update of exFAT names
 Added notes in Default view (except exFAT)
 Exit in case of grub4efi text mode
 Added negative values on NTFS: BPB_ClusPerMft & BPB_ClusPerIndx
-Calculation of byte-values if negative values on NTFS in '/JL' & Default view
+Calculation of byte-values if negative values on NTFS in '/JL' & Default view (+ switch name)
 
 Version 0.1
 First published version
