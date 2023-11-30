@@ -1,4 +1,4 @@
-PBRVIEW.G4B v0.2 (20231102), by deomsh
+PBRVIEW.G4B v0.2.1 (20231129), by deomsh
 Function: Function: display FAT12/16, FAT32, NTFS or exFAT Partition Boot Record
 PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/MS|/PQ|/JL]
 Optional: --start=N|--skip=n|--force=N: N/n is starting sector/byte (0-N/n)
@@ -24,6 +24,8 @@ Example: PBRVIEW.G4B --skip=0x7E00 (cd)0+0x800
 Example: PBRVIEW.G4B (0xe0)0x567+1
 
 History
+Version 0.2.1
+Bugfix: correct display of File-system for FAT12 bootsectors >=32MB
 Version 0.2
 Bug fixes
 Added switch with 'Good names' of Jaclaz/ Wonko the Sane
