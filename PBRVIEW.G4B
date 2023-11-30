@@ -1,5 +1,5 @@
 !BAT
-#-#+ PBRVIEW.G4B v0.2 (20231102), by deomsh
+#-#+ PBRVIEW.G4B v0.2.1 (20231129), by deomsh
 #-# View Partition Boot Record (FAT12/FAT16/FAT32/NTFS/exFAT)
 if "%~1"=="" && echo Use:  PBRVIEW.G4B [--start=N|--skip=n|--force=N] DEVICE|FILE [/PQ|/MS|/JL] && echo Help: PBRVIEW.G4B /?|--?|? && echo example 1: PBRVIEW.G4B (hd0,0) && echo example 2: PBRVIEW.G4B --start=63 (hd0) && echo example 3: PBRVIEW.G4B (hd0,0)/file.img /MS && echo example 4: PBRVIEW.G4B --force=63 (hd0,0)/file.img /JL && echo example 5: PBRVIEW.G4B (0xe0)0x567+1 && goto :eof
 if not "%~1"=="/?" if not "%~1"=="--?" if not "%~1"=="?" || goto :help
@@ -130,7 +130,9 @@ if %pbrtype%==NTFS && if not %format%==PQ && set col5=%col3% && set col3=%col4% 
 set /A address=%base%+0x13 &; call :read %address% %source% ;; set /A totsc16h=%result%&0xffff &; set /a totsec16=%totsc16h%
 set /A address=%base%+0x10 &; call :read %address% %source% ;; set /A numfath=%result%&0xff &; set /a numfat=%numfath%
 set /A address=%base%+0x16 &; call :read %address% %source% ;; set /A secpfath=%result%&0xffff &; set /a secpfat=%secpfath%
-if %pbrtype:~0,3%==FAT && if %totsc16h%>=1 && set /a rootsec=%rootdire% * 32 / %bytpsec% &; set /a maxclush=-1 * %numfat% * %secpfat% + %totsc16h% - %rsvdsect% - %rootsec% / %secclush% &; if %maxclush%<=4085 && set pbrtype=FAT12 ! set pbrtype=FAT16
+#FAT12betterMax4084Clusters!#
+if %pbrtype:~0,3%==FAT && if %totsc16h%>=1 && set /a rootsec=%rootdire% * 32 / %bytpsec% &; set /a maxclush=-1 * %numfat% * %secpfat% + %totsc16h% - %rsvdsect% - %rootsec% / %secclush% &; if %maxclush%<=4084 && set pbrtype=FAT12 ! set pbrtype=FAT16
+#ORG#if %pbrtype:~0,3%==FAT && if %totsc16h%>=1 && set /a rootsec=%rootdire% * 32 / %bytpsec% &; set /a maxclush=-1 * %numfat% * %secpfat% + %totsc16h% - %rsvdsect% - %rootsec% / %secclush% &; if %maxclush%<=4085 && set pbrtype=FAT12 ! set pbrtype=FAT16
 call Fn.4 ;; set /a x=%@retval%>>8
 if %format%==DEF && if not %EBPB%==MSDOS70 && set /a max=0x10000 * %bytpsec% / 1m &; echo -e -n %col4%total sectors\x20\x20\x20%totsec16% && call :Fn.5 26 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 40 %x% && echo -e %col4% 19 \t0x13 \t 2\t$[0x78]< %max%MB && set max=
 if %format%==DEF && if %EBPB%==MSDOS70 && set /a max=0x10000 * %bytpsec% / 1m &; echo -e -n %col4%total sectors\x20\x20\x20%totsec16% && call :Fn.5 26 %x% && echo -n %col4%%%totsc16h% && call :Fn.5 40 %x% &; if not %pbrtype%==FAT32 && echo -e %col4% 19 \t0x13 \t 2\t$[0x78]< %max%MB ! echo -e %col4% 19 \t0x13 \t 2\t$[0x78]must be zero &; set max=
@@ -179,7 +181,9 @@ if %format%==MS && echo -n -e BPB_HiddSec \t%hiddsec% && call :Fn.5 26 %x% && ec
 if %format%==JL && echo -n -e %col3%Sectors_Before\t %hiddsec% && call :Fn.5 27 %x% && echo -n %col3%%%hiddsech% && call :Fn.5 41 %x% && echo -e %col3%%28\t 0x1C\t 4
 set /A address=%base%+0x20 &; call :read %address% %source% ;; set /A totsc32h=%result%&0xffffffff &; set /a totsec32=%totsc32h%
 if %secpfat%==0 && set /A address=%base%+0x24 &; call :read %address% %source% &; set /A secpfath=%result%&0xffffffff &; set /a secpfat=%secpfath%
-if %pbrtype:~0,3%==FAT && if %totsc16h%==0 && if %totsc32h%>=1 && set /a rootsec=%rootdire% * 32 / %bytpsec% &; set /a maxclush=-1 * %numfat% * %secpfat% + %totsc32h% - %rsvdsect% - %rootsec% / %secclush% &; if %maxclush%<=65526 && set pbrtype=FAT16 ! set pbrtype=FAT32
+#BETTERforFAT12>=32MBand FAT16<=65524Clusters#
+if %pbrtype:~0,3%==FAT && if %totsc16h%==0 && if %totsc32h%>=1 && set /a rootsec=%rootdire% * 32 / %bytpsec% &; set /a maxclush=-1 * %numfat% * %secpfat% + %totsc32h% - %rsvdsect% - %rootsec% / %secclush% &; if %maxclush%<=4084 && set pbrtype=FAT12 ! if %maxclush%<=65524 && set pbrtype=FAT16 ! set pbrtype=FAT32
+#ORG#if %pbrtype:~0,3%==FAT && if %totsc16h%==0 && if %totsc32h%>=1 && set /a rootsec=%rootdire% * 32 / %bytpsec% &; set /a maxclush=-1 * %numfat% * %secpfat% + %totsc32h% - %rsvdsect% - %rootsec% / %secclush% &; if %maxclush%<=65526 && set pbrtype=FAT16 ! set pbrtype=FAT32
 if not exist file && if not exist BLOCK && if not exist block &; if %base%==0 && set /a skip=%start% ! set /a skip=%base%/0x200
 if exist block &; if exist start && if %base%==0 && set skip=%start% ! if exist start && set /a skip=%base%/0x200+%start% ! set /a skip=%base%/0x200
 if not exist file && if not exist BLOCK && if %pbrtype:~0,3%==FAT && echo %pbrtype% Partition Boot Record %DEVICE% sector %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
@@ -518,13 +522,13 @@ set /a bit0=%~1>>0&1 && set /a bit1=%~1>>1&1 && set /a bit2=%~1>>2&1 && set /a b
 goto :eof
 ::
 :help
-echo PBRVIEW.G4B v0.2 (20231102), by deomsh
+echo PBRVIEW.G4B v0.2.1 (20231129), by deomsh
 echo Function: display FAT12/16, FAT32, NTFS or exFAT Partition Boot Record
 echo PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/MS|/PQ|/JL]
 echo Optional: --start=N|--skip=n|--force=N: N/n is starting sector/byte (0-N/n)
 echo $[] If no partition is given use image-file, disk or blocklist
 echo Optional: /MS|/PQ|/JL for Microsoft, PowerQuest or Jaclaz names
-echo Remarks: 
+echo Remarks:
 echo FILE can be a blocklist too
 echo With --start/--force N sector number is in 512 byte units
 echo $[] With --start/--skip/--force filesystem derived from jump-code
