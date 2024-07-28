@@ -1,16 +1,17 @@
-PBRVIEW.G4B v0.2.1 (20231129), by deomsh
+PBRVIEW.G4B v0.3 (20240728), by deomsh
 Function: Function: display FAT12/16, FAT32, NTFS or exFAT Partition Boot Record
 PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/MS|/PQ|/JL]
 Optional: --start=N|--skip=n|--force=N: N/n is starting sector/byte (0-N/n)
- If no partition is given use image-file, disk or blocklist
-Optional: /MS|/PQ|/JL for Microsoft, PowerQuest or Jaclaz names
+ If DEVICE is not a partition use image-file, disk or blocklist
+Optional: '/M[S]|/P[Q]|/J[L]' for Microsoft, PowerQuest or Jaclaz names
 Remarks: 
-FILE can be a blocklist too
+FILE can be a blocklist too; CD/DVD: blocklist only
 With --start/--force N sector number is in 512 byte units
  With --start/--skip/--force filesystem derived from jump-code only
- First 4MB is searched for EBxx90 (0x2000 sectors in 512 byte sectors)
-In case of exFAT: switch /MS, /PQ or /JL changes colors only
-Unlock line 29 to change default colors to blue
+ First 16MB is searched for EBxx90/ E9xxxx (0x8000 sectors in 512 byte sectors)
+ Without valid Media Descriptor found, search is continued/ skipped
+In case of exFAT: switch /M[S], /P[Q] or /J[L] changes colors only
+Unlock line 31 to change default colors to blue
 Text mode of grub4efi not supported, use some graphics mode
 Example: PBRVIEW.G4B (hd0,0)
 Example: PBRVIEW.G4B (fd0) /MS
@@ -19,11 +20,25 @@ Example: PBRVIEW.G4B (hd0) /JL
 Example: PBRVIEW.G4B --start=63 (hd0)
 Example: PBRVIEW.G4B (hd0,0)/FATIMAGE.IMG
 Example: PBRVIEW.G4B --force=1008 (hd1,0)/ISOFILE.ISO
-Example: PBRVIEW.G4B --skip=0x3F0 (hd1,0)/FATIMAGE.IMG
-Example: PBRVIEW.G4B --skip=0x7E00 (cd)0+0x800
-Example: PBRVIEW.G4B (0xe0)0x567+1
+Example: PBRVIEW.G4B --start=6 (hd0,0) /M
+Example: PBRVIEW.G4B --skip=0x7E00 (0xa0)0+0x800
 
 History
+v0.3
+New: abbreviation of switches possible
+New: better detection of exFAT & NTFS
+New: echo with --force if no PBR found + bytepsec=2k with CD-ROM
+Max search area now 16MB
+New: search includes finding E9xxxx
+Better comment for hidden sectors
+New: CD-ROM starts at 0x9f; still acces to harddrive (hd31)
+HELP: small changes
+Bugfix: bad read of jump & bootsignature if zeros!
+New: ISO's always treated as CD-ROM
+New: improved --force count with CD-ROM
+New: --start compatible with CD-ROM including search
+New: skip/ search again with empty OEM
+New: Full FAT32 showed in ONE screen with graphicsmode > 640 (from 800x600 onwards)
 Version 0.2.1
 Bugfix: correct display of File-system for FAT12 bootsectors >=32MB
 Version 0.2
