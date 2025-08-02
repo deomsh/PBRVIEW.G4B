@@ -1,4 +1,4 @@
-PBRVIEW.G4B v0.3 (20240728), by deomsh
+PBRVIEW.G4B v0.4 (20250802), by deomsh
 Function: Function: display FAT12/16, FAT32, NTFS or exFAT Partition Boot Record
 PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/MS|/PQ|/JL]
 Optional: --start=N|--skip=n|--force=N: N/n is starting sector/byte (0-N/n)
@@ -24,6 +24,9 @@ Example: PBRVIEW.G4B --start=6 (hd0,0) /M
 Example: PBRVIEW.G4B --skip=0x7E00 (0xa0)0+0x800
 
 History
+v0.4
+NEW: FILE can be used between double-quotes if containing spaces or '='
+
 v0.3
 New: abbreviation of switches possible
 New: better detection of exFAT & NTFS
