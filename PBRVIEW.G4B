@@ -1,5 +1,5 @@
 !BAT
-#-#+ PBRVIEW.G4B v0.3 (20240728), by deomsh
+#-#+ PBRVIEW.G4B v0.4 (20250802), by deomsh
 #-# View Partition Boot Record (FAT12/FAT16/FAT32/NTFS/exFAT)
 if "%~1"=="" && echo Use:  PBRVIEW.G4B [--start=N|--skip=n|--force=N] DEVICE|FILE [/PQ|/MS|/JL] && echo Help: PBRVIEW.G4B /?|--?|? && echo example 1: PBRVIEW.G4B (hd0,0) && echo example 2: PBRVIEW.G4B --start=63 (hd0) && echo example 3: PBRVIEW.G4B (hd0,0)/file.img /MS && echo example 4: PBRVIEW.G4B --force=63 (hd0,0)/file.img /JL && echo example 5: PBRVIEW.G4B (0xe0)0x567+1 && goto :eof
 if not "%~1"=="/?" if not "%~1"=="--?" if not "%~1"=="?" || goto :help
@@ -20,6 +20,8 @@ set DEVICE=%~d1 &; if exist @uefi && if %DEVICE:~0,4==(rd, echo Partitioned ram-
 if "%DEVICE%"=="%~1" && if not "%DEVICE:~0,3%"=="(fd" && if not "%DEVICE:~0,3%"=="(hd" && if not "%DEVICE:~0,3%"=="(rd" &; if %DEVICE:~1,-1%>=0x9F && set CDROM=Y
 if not %CDROM%==Y &; if not "%~1"=="(cd)" if not "%~1"=="(cd0)" if not "%~1"=="(cd1)" if not "%~1"=="(cd2)" if not "%~1"=="(cd3)" if not "%~1"=="(cd,0)" if not "%~1"=="(cd,1)" if not "%~1"=="(cd,2)" if not "%~1"=="(cd,3)" |; set CDROM=Y
 set "file=%~nx1" && set "name=%~n1" && set /u "ext=%~x1" &; if exist file &; call Fn.11 "%~1" "/" && set "file=%~f1" ! call Fn.11 "%file%" "+" && if not exist ext && set file=%DEVICE%%%file% && set BLOCK=%DEVICE%%%file% ! set file=
+if exist file && call Fn.11 "%file%" "\ " && echo -e "%file%" | set file= &; set "file=%file:~1,-1%" &; call :lsspaces "%file%" "\x20" &; echo -n > (md)0x300+1
+if exist file && call Fn.11 "%file%" "=" && call :lsspaces "%file%" "\x3D" &; echo -n > (md)0x300+1
 if exist file && if not exist %file% && echo Abort: '%file%' does not exist && goto :eov
 if exist file &; raw cat --length=0 %file% && set /a filesize=*0x8290 ! echo File '%file%' is zero byte && set result=0 && goto :eov
 if exist file && if %ext%==.ISO && set CDROM=Y
@@ -37,7 +39,6 @@ if not exist file && if not exist BLOCK && if not "%~1"=="(rd)" && if not %CDROM
 if not exist file && if not exist BLOCK && if not "%~1"=="(rd)" && if %CDROM%==Y && if exist @uefi &; rootnoverify %~1 > nul && set /A filesec=*0x82B0 && set /A filesize=*0x82B0*0x200 ! set filesec=0x2000 &; root %rootorg% > nul && set rootorg=
 if not exist file && if not exist BLOCK && if not "%~1"=="(rd)" && if %CDROM%==Y && if not exist @uefi &; setlocal && set device=%DEVICE% && set /A diffsec=300m/2k &; set CDtotsec=%diffsec% && set diff2sec=%diffsec% && call :getCDtotsec &; if not exist CDtotsec && endlocal && set filesec=0x2000 ! endlocal && set filesec=%CDtotsec%
 if not exist file && if not exist BLOCK && if "%~1"=="(rd)" &; set /A filesize=*0x82D8 &; set /A filesec=%filesize%>>9
-#ORG=BadForGRUB4EFI#if not exist file && if not exist BLOCK && set rt=%@root% &; rootnoverify %~1 > nul && set /A filesec=*0x82B0 && set /A filesize=*0x82B0*0x200 ! set filesec=0x2000 &; root %rt% > nul && set rt=
 if not exist forcesec &; if not exist startsec if not exist startbyt |; if "%DEVICE:~0,3%"=="(fd" &; if exist startsec && set source=%DEVICE%%%startsec%+%filesec% && set skipbyt=0 && set start=%startsec% && set startsec= ! set source=%DEVICE%%0+%filesec% && set start=0 && set skipbyt=0 &; set block=Y && set /a filesize=%filesec% * 0x200 && set filesec=
 if not exist forcesec && if not exist file && if not exist BLOCK &; if not "%DEVICE:~0,3%"=="(hd" if not "%DEVICE:~0,3%"=="(rd" |; call Fn.11 "%DEVICE%" "," |; if exist startsec && set source=%DEVICE%%0+%filesec% && set block=Y && set start=%startsec% && set /a filesize=%filesec% * 0x200 && set filesec= ! set source=%DEVICE%%0+%filesec% && set block=Y && set start=0 && set skipbyt=0 && set /a filesize=%filesec% * 0x200 && set filesec=
 if not exist forcesec &; if not exist startsec if not exist startbyt |; if "%DEVICE:~0,3%"=="(fd" &; if exist startsec && set source=%DEVICE%%0+%filesec% && set start=%startsec% ! set source=%DEVICE%%0+%filesec% && set start=0 && set skipbyt=0 &; set block=Y && set /a filesize=%filesec% * 0x200 && set filesec=
@@ -51,7 +52,6 @@ set startsec= && set filesec=
 if not exist source && echo Abort: %~1 not found && set result=0 && goto :eof
 errorcheck off
 set /A address=%base%+0 &; call :read %address% %source% ;; set /A jumph=%result%&0xffffff &; set jumph=000000%jumph:~2% &; set jumph=0x%jumph:~-6,6% &; set "jump=%jumph:~-2,2%%%jumph:~-4,2%%%jumph:~-6,2%"
-#BUG#set /A address=%base%+0 &; call :read %address% %source% ;; set /A jumph=%result%&0xffffff &; set "jump=%jumph:~-2,2%%%jumph:~-4,2%%%jumph:~-6,2%"
 if %jumph%==0x904CEB && set /A address=%base%+14 &; cat --skip=%base% --locatei=FAT --length=0x5B %source% > nul && set pbrtype=FAT
 if %jumph%==0x9058EB && set /A address=%base%+14 &; cat --skip=%base% --locatei=FAT --length=0x5B %source% > nul && set pbrtype=FAT32
 if %jumph%==0x903CEB && set /A address=%base%+14 &; cat --skip=%base% --locatei=FAT --length=0x5B %source% > nul && set pbrtype=FAT
@@ -85,7 +85,9 @@ if exist forcesec && set skip=%forcesec% && set forcesec=
 if not %CDROM%==Y && if not exist file && if not exist BLOCK && if not %pbrtype:~0,3%==FAT &; echo -e -n %pbrtype% Partition Boot Record %DEVICE% sector %skip% | set header1= &; echo -e %col1%%%header1%
 if %CDROM%==Y && if not exist file && if not exist BLOCK && if not %pbrtype:~0,3%==FAT &; calc %base% % 2k |; echo -e -n %pbrtype% Partition Boot Record %DEVICE% sector %skip% | set header1= &; echo -e %col1%%%header1%
 if not exist header1 && if %CDROM%==Y && if not exist file && if not exist BLOCK && if not %pbrtype:~0,3%==FAT &; calc %base% % 2k && set /A skip=%base% &; echo -e -n %pbrtype% Partition Boot Record %DEVICE% offset %skip% | set header1= &; echo -e %col1%%%header1%
-if exist file && if not %pbrtype:~0,3%==FAT &; echo -e -n %pbrtype% Partition Boot Record %source% offset %skip% | set header1= &; echo -e %col1%%%header1%
+if exist file && if not %pbrtype:~0,3%==FAT && echo -e "%source%" | set echosrc= &; set "echosrc=%echosrc:~1,-1%" &; set /a srclen=%@retval%
+if exist file && if not %pbrtype:~0,3%==FAT &; if %srclen%<=35 && echo -e -n %pbrtype% Partition Boot Record %source% offset %skip% | set header1= &; echo -e %col1%%%header1% && set echosrc= && set srclen=
+if exist file && if not %pbrtype:~0,3%==FAT &; if not %srclen%<=35 && echo -e -n %pbrtype% Partition Boot Record %echosrc:~0,27%\x2E\x2E\x2E%echosrc:~-5,5% offset %skip% | set header1= &; echo -e %col1%%%header1% && set echosrc= && set srclen=
 if exist BLOCK && if not %pbrtype:~0,3%==FAT &; echo -e -n %pbrtype% Partition Boot Record %BLOCK% offset %skip% | set header1= &; echo -e %col1%%%header1%
 if %pbrtype%==exFAT && goto :EXFATSpecific
 if %format%==DEF && echo -e entry \t\tvalue \t\x20\x20(hex)\t\toffset  (hex)\tbyte(s) notes | set header2= &; echo %col2%%%header2%
@@ -206,7 +208,9 @@ if %pbrtype:~0,3%==FAT &; if %CDROM%==Y && if exist block &; calc %base% % 2k ||
 if not %CDROM%==Y && if not exist file && if not exist BLOCK && if %pbrtype:~0,3%==FAT &; echo -e -n %pbrtype% Partition Boot Record %DEVICE% sector %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
 if %CDROM%==Y && if not exist file && if not exist BLOCK && if %pbrtype:~0,3%==FAT &; calc %base% % 2k |; echo -e -n %pbrtype% Partition Boot Record %DEVICE% sector %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
 if not exist header1 && if %CDROM%==Y && if not exist file && if not exist BLOCK && if %pbrtype:~0,3%==FAT &; calc %base% % 2k && set /A skip=%base% &; echo -e -n %pbrtype% Partition Boot Record %DEVICE% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
-if exist file && if %pbrtype:~0,3%==FAT &; echo %pbrtype% Partition Boot Record %source% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
+if exist file && if %pbrtype:~0,3%==FAT && echo -e "%source%" | set echosrc= &; set "echosrc=%echosrc:~1,-1%" &; set /a srclen=%@retval%
+if exist file && if %pbrtype:~0,3%==FAT &; if %srclen%<=35 && echo %pbrtype% Partition Boot Record %source% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1% && set srclen=
+if exist file && if %pbrtype:~0,3%==FAT &; if not %srclen%<=35 && echo %pbrtype% Partition Boot Record %echosrc:~0,20%\x2E\x2E\x2E%echosrc:~-12,12% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1% && set srclen=
 if exist BLOCK && if %pbrtype:~0,3%==FAT &; echo %pbrtype% Partition Boot Record %BLOCK% offset %skip% | set header1= &; echo -P:0000 -n -e %col1%%%header1%
 set CDROM= && set skip= && set start=
 call Fn.4 ;; set /a x=%@retval%>>8
@@ -478,7 +482,6 @@ goto :EndOfSector0
 ::
 :EndOfSector0
 set /A address=%base%+0x1FE &; call :read %address% %source% ;; set /A magicbth=%result%&0xffff &; set magicbth=0000%magicbth:~2% &; set magicbth=0x%magicbth:~-4,4% &; set magicbyt=%magicbth:~-2,2%%%magicbth:~-4,2%
-#BUG#set /A address=%base%+0x1FE &; call :read %address% %source% ;; set /A magicbth=%result%&0xffff &; set magicbyt=%magicbth:~-2,2%%%magicbth:~-4,2%
 if not %pbrtype%==FAT12 if not %pbrtype%==FAT16 || if %format%==DEF && echo -e %col3%boot signature \t%magicbyt% \t\x20\x20%magicbth% \t510 \t0x1FE \t 2$[0x87]\talways 55h,AAh\x20
 if not %pbrtype%==FAT32 if not %pbrtype%==NTFS || if %format%==DEF && echo -e %col3%boot signature \t%magicbyt% \t\x20\x20%magicbth% \t510 \t0x1FE \t 2$[0x78]\talways 55h,AAh\x20
 ###zero \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
@@ -511,8 +514,6 @@ goto :eof
 setlocal
 if exist startsec && if %CDROM%==Y && set /A base=%startsec% * 2k ! if exist startsec && set /A base=%startsec% * 0x200 ! if exist startbyt && set /A base=%startbyt% ! set base=0
 if not exist filesize && set /A length=8m ! if not %filesize%<=8m && set /A length=8m ! set /A length=%filesize%
-#NOTGOODwithLogicalPartition#if not exist filesize && set /A length=2m ! if not %filesize%<=2m && set /A length=2m ! set /A length=%filesize%
-#NOTGOODwithBiggerLogicalPartition#if not exist filesize && set /A length=4m ! if not %filesize%<=4m && set /A length=4m ! set /A length=%filesize%
 set "mediabts=0xF0,0xF8,0xF9,0xFA,0xFB,0xFC,0xFD,0xFE,0xFF"
 raw cat --skip=%base% --locate=\xEB --length=1 %source% > nul && set /A skipEB=%base%+2 &; raw cat --skip=%skipEB% --locate=\x90 --length=1 %source% > nul && set EBXX90=Y && set /A skipEB=%base%+3 &; raw cat --skip=%skipEB% --length=8 %source% | set OEM= && set result=%base%
 if exist OEM && if /i %OEM:~0,5%==EXFAT && set /A skipEB=%skipEB%-3+0x48 &; raw cat --skip=%skipEB% --locate=\x00 --length=8 %source% > nul &; if not %@retval%==8 && endlocal && set result=%base% && goto :eof ! set OEM=
@@ -593,8 +594,32 @@ endlocal && set result=%result% && goto :eof
 set /a bit0=%~1>>0&1 && set /a bit1=%~1>>1&1 && set /a bit2=%~1>>2&1 && set /a bit3=%~1>>3&1 && set /a bit7=%~1>>7&1
 goto :eof
 ::
+:lsspaces
+setlocal && set *
+set mdmem=0x300
+set "file=%~1"
+set numspace= && set skip=0
+echo -n > (md)%mdmem%+1
+pause --wait=0 "%file%" > (md)%mdmem%+1
+cat --locate=%~2 (md)%mdmem%+1 > nul ;; set /a numspace=%@retval% > nul
+if %numspace%==0 && endlocal && set "file=%file%" && goto :eof
+:spaceloop
+if %numspace%==0 && cat (md)%mdmem%+1 | set file= &; set "file=%file:~1,-1%" &; endlocal && set "file=%file%" && goto :eof
+cat --skip=%skip% --locate=%~2 --number=1 (md)%mdmem%+1 > nul ;; set /A skip=%?% > nul
+set /A skipmin1=%skip%-1 > nul
+cat --skip=%skipmin1% --locate=\x5C --number=1 (md)%mdmem%+1 > nul ;; set /A skipmin1=%?% > nul
+if %skipmin1%>=1 && set /A skipmin1=%skipmin1%+1 > nul
+if %skip%==%skipmin1% && set /a numspace=%numspace%-1 > nul && set /A skip=%skip%+2 > nul && goto :spaceloop
+set /A seek=%skip%+1 > nul
+raw dd if=(md)%mdmem%+1 of=(md)%mdmem%+1 bs=1 skip=%skip% seek=%seek%
+cat --skip=%skip% --locate=%~2 --replace=\x5C --number=1 (md)%mdmem%+1 > nul
+set /a numspace=%numspace%-1 > nul
+if %numspace%==0 && cat (md)%mdmem%+1 | set file= &; set "file=%file:~1,-1%" &; endlocal && set "file=%file%" && goto :eof
+set /A skip=%skip%+2 > nul
+goto :spaceloop
+::
 :help
-echo PBRVIEW.G4B v0.3 (20240728), by deomsh
+echo PBRVIEW.G4B v0.4 (20250802), by deomsh
 echo Function: display FAT12/16, FAT32, NTFS or exFAT Partition Boot Record
 echo PBRVIEW.G4B [--start=N|--skip=n|--force=N] DISK|DEVICE|FILE [/M[S]|/P[Q]|/J[L]]
 echo Optional: --start=N|--skip=n|--force=N: N/n is starting sector/byte (0-N/n)
