@@ -522,7 +522,7 @@ if %EBXX90%==Y && set /A address=%base%+0xB &; call :read %address% %source% &; 
 if %EBXX90%==Y && set /A address=%base%+0x13 &; call :read %address% %source% &; if %result%==0 && set result= && set /A address=%base%+0x20 &; call :read %address% %source% &; if %result%==0 && set EBXX90=
 if %EBXX90%==Y && set /A address=%base%+0x15 &; call :read %address% %source% &; set /A mediabyt=%result%&0xff &; checkrange %mediabts% calc %mediabyt% && endlocal && set result=%base% && goto :eof ! set EBXX90=
 set /A base=%base%+0x200 && set skipEB=
-set find=xEB && set orgbase=%base% && set orglen=%length% 
+set find=xEB && set orgbase=%base% && set orglen=%length%
 call :Fn.4 &; echo -n $[0x0F]Wait searching jump instruction EBxx90 in next 16MB...
 :loopsearchEBxx90
 raw cat --skip=%base% --locate=\%find% --length=%length% --number=1 %source% > nul &; set /A skipEB=%?% &; set baseEB=%skipEB% && set /A length=%length%+%base%-%skipEB% &; calc %skipEB% % 0x200 || set /A skipEB=%skipEB%+2 ! if %length%>=0x200 && set /A base=%skipEB% / 0x200 * 0x200 + 0x200 && set skipEB= && set baseEB= && goto :loopsearchEBxx90
