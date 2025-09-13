@@ -678,7 +678,7 @@ echo $[]          '/B[LUE]' changes default names/ colors to blue color
 #ORG#echo $[] Unlock line 34 to change default colors to blue
 echo Remarks:
 #ORG#echo FILE can be a blocklist too; CD/DVD: blocklist only
-echo $[] If FILE contains spaces/= use escaped chars '\ '/ '\=' or double qoutes around
+echo If FILE contains spaces/= use escaped chars '\ '/  '\=' or double qoutes around
 echo With --start=N|--force=N Sector number is in 512 byte units
 echo $[] With --start=N|--skip=n|--force=N Filesystem derived from Jump-code
 echo $[] First 16MB is searched for EBxx90/ E9xxxx (0x8000 sectors in 512 byte sectors)
