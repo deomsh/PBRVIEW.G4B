@@ -74,10 +74,10 @@ First published version
 ![PBRVIEW G4B v0 5 version and textstat](https://github.com/user-attachments/assets/138284f3-a946-41f8-95a3-5b78308bda3a)
 
 #### Smallhelp
-![PBRVIEW G4B v0 4 1 Smallhelp](https://github.com/user-attachments/assets/c5f82248-4744-4d6c-8b78-b8dc54193c63)
+![PBRVIEW G4B v0 5 Smallhelp](https://github.com/user-attachments/assets/d846f4f0-91c5-4dcd-963e-b7643a3ee4bd)
 
 #### Help
-![PBRVIEW G4B v0 4 1 Help](https://github.com/user-attachments/assets/7848daa4-0546-4266-b53b-03702e33fca1)
+![PBRVIEW G4B v0 5 Help](https://github.com/user-attachments/assets/59dd4616-109f-4140-a56a-1f74667b4c31)
 
 #### PBRVIEW.G4B (fd0) (Floppy 3840KB, FAT12, Default names/ colors, with notes)
 ![PBRVIEW G4B v0 4 1 on (fd0) Floppy 3840KB, FAT12](https://github.com/user-attachments/assets/85931097-cc55-4761-8d50-8ec31643b880)
@@ -106,3 +106,12 @@ First published version
 
 #### PBRVIEW.G4B (0xe0)3775+10000 (El Torito 1440k Boot Floppy NOT at CD Sector-border, but with - relative - offset=0x600, auto-searched, Default names/ colors, with notes)
 ![PBRVIEW G4B v0 4 1 (0xe0)3775+10000 El Torito 1440k bootfloppy NOT at cd-sector border but offset=0x600, auto-searched](https://github.com/user-attachments/assets/ba485554-acf5-46af-a992-79989253c992)
+
+#### PBRVIEW --BPB=FAT (hd1,0) (MS-DOS 3.00 Boot Parameter Block: watch use of High word in Hidden Sectors for Drive Number)
+![PBRVIEW G4B v0 5 view of MS-DOS 3 00 BPB with option --BPB=FAT on (hd1,0)  WATCH high word if Hidden Sectors!](https://github.com/user-attachments/assets/186e39d3-7ba1-4dd1-aa63-6b7cc2f4c713)
+
+#### PBRVIEW --BPB=FAT (hd1,0) (MKFATIMG.G4B' MSDOS20 Boot Parameter Block: watch insertion of 'FAT' in Boot Code to trick Grubutil fat)
+![PBRVIEW G4B v0 5 view of MS-DOS 2 00 BPB with option --BPB=FAT on (hd1,0)  WATCH File System to trick Grubutil &#39;fat&#39;](https://github.com/user-attachments/assets/31ef5c36-fca5-4401-b511-accea66c140d)
+
+#### Better compatibility with VMWare graphicsmodes: output of FAT32-table in one screen with resolution 800x600
+![PBRVIEW G4B v0 5 view of USB64GB FAT32 on 800x600 in VMWare](https://github.com/user-attachments/assets/ac949148-4f6d-492e-92f3-b57e48de6fde)
