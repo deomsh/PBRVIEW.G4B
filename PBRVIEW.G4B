@@ -1,7 +1,7 @@
 !BAT
 #-#+ PBRVIEW.G4B v0.5 (20260111), by deomsh
 #-# View Partition Boot Record (FAT12/FAT16/FAT32/NTFS/exFAT)
-if "%~1"=="" && echo Use:  PBRVIEW.G4B [--start=N|--skip=n|--force=N] DEVICE|DISK|FILE [/PQ|/MS|/JL|/BLUE] && echo Help: PBRVIEW.G4B /?|--?|? && echo example 1: PBRVIEW.G4B (hd0,0) && echo example 2: PBRVIEW.G4B --start=63 (hd0) && echo example 3: PBRVIEW.G4B (hd0,0)/file.img /MS && echo example 4: PBRVIEW.G4B --force=63 (hd0,0)/Long\ File\ Name\ \=\ Image.IMG /JL && echo example 5: PBRVIEW.G4B (0xe0)0x567+1 && goto :eof
+if "%~1"=="" && echo Use:  PBRVIEW.G4B [--BPB=FS] [--start=N|--skip=n|--force=N] DEVICE|DISK|FILE [/PQ|/MS|/JL|/BLUE] && echo Help: PBRVIEW.G4B /?|--?|? && echo example 1: PBRVIEW.G4B (hd0,0) && echo example 2: PBRVIEW.G4B --start=63 (hd0) && echo example 3: PBRVIEW.G4B (hd0,0)/file.img /MS && echo example 4: PBRVIEW.G4B --force=63 (hd0,0)/Long\ File\ Name\ \=\ Image.IMG /JL && echo example 5: PBRVIEW.G4B (0xe0)0x567+1 && goto :eof
 if not "%~1"=="/?" if not "%~1"=="--?" if not "%~1"=="?" || goto :help
 if exist @uefi && graphicsmode > nul &; if %@retval%<=0xFF && echo Textmode of grub4efi not supported && goto :eof
 setlocal && set *
