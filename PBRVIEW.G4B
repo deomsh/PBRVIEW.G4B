@@ -1,5 +1,5 @@
 !BAT
-#-#+ PBRVIEW.G4B v0.5 (20260111), by deomsh
+#-#+ PBRVIEW.G4B v0.5.1 (20260127), by deomsh
 #-# View Partition Boot Record (FAT12/FAT16/FAT32/NTFS/exFAT)
 if "%~1"=="" && echo Use:  PBRVIEW.G4B [--BPB=FS] [--start=N|--skip=n|--force=N] DEVICE|DISK|FILE [/PQ|/MS|/JL|/BLUE] && echo Help: PBRVIEW.G4B /?|--?|? && echo example 1: PBRVIEW.G4B (hd0,0) && echo example 2: PBRVIEW.G4B --start=63 (hd0) && echo example 3: PBRVIEW.G4B (hd0,0)/file.img /MS && echo example 4: PBRVIEW.G4B --force=63 (hd0,0)/Long\ File\ Name\ \=\ Image.IMG /JL && echo example 5: PBRVIEW.G4B (0xe0)0x567+1 && goto :eof
 if not "%~1"=="/?" if not "%~1"=="--?" if not "%~1"=="?" || goto :help
@@ -12,16 +12,13 @@ debug msg=0
 pager off
 set "rootorg=%@root%" &; if not exist @uefi && if "%rootorg:~0,3%"=="(cd" && set /A drvnum=*0x82A0&0xff > nul &; if "%rootorg:~3,1%"==")" && set "rootorg=(%drvnum%)%rootorg:~4%" ! set "rootorg=(%drvnum%)%rootorg:~5%"
 errorcheck off
-#NEW#
 if /i "%~1"=="--BPB" && set /u "BPB=%~2" && shift && shift
-#####
 if /i "%~1"=="--start" && set /a "startsec=%~2" && shift && shift
 if not exist startsec && if /i "%~1"=="--skip" &; set /A "startbyt=%~2" && shift && shift
 if not exist startsec && if not exist startbyt &; if /i "%~1"=="--force" && set /a "forcesec=%~2" && shift && shift
-#NEW#
 if /i "%~1"=="--BPB" && set /u "BPB=%~2" && shift && shift
-#####
-if not /i "%~1"=="--start" if not /i "%~1"=="--skip" if not /i "%~1"=="--force" || echo Wrong use of switches && set result=0 && goto :eov
+if exist BPB &; if not /i "%BPB%"=="FAT" && if not /i "%BPB%"=="FAT12" && if not /i "%BPB%"=="FAT16" && if not /i "%BPB%"=="FAT32" && if not /i "%BPB%"=="NTFS" && if not /i "%BPB%"=="EXFAT" &; echo Wrong use of switch '--BPB=FS' && set result=0 && goto :eov
+if not /i "%~1"=="--start" if not /i "%~1"=="--skip" if not /i "%~1"=="--force" if not /i "%~1"=="--BPB" || echo Wrong use of switch '--start=N' OR '--skip=n' OR 'force=N' && set result=0 && goto :eov
 set DEVICE=%~d1 &; if exist @uefi && if %DEVICE:~0,4==(rd, echo Partitioned ram-disk not supported in grub4efi && set result=0 && goto :eof
 if "%DEVICE%"=="%~1" && if not "%DEVICE:~0,3%"=="(fd" && if not "%DEVICE:~0,3%"=="(hd" && if not "%DEVICE:~0,3%"=="(rd" &; if %DEVICE:~1,-1%>=0x9F && set CDROM=Y
 if not %CDROM%==Y &; if not "%~1"=="(cd)" if not "%~1"=="(cd0)" if not "%~1"=="(cd1)" if not "%~1"=="(cd2)" if not "%~1"=="(cd3)" if not "%~1"=="(cd,0)" if not "%~1"=="(cd,1)" if not "%~1"=="(cd,2)" if not "%~1"=="(cd,3)" |; set CDROM=Y
@@ -68,18 +65,12 @@ if %jumph%==0x90FEEB && set /A address=%base%+14 &; cat --skip=%base% --locatei=
 if %jumph%==0x9052EB && raw cat --skip=%address% --locate=NTFS\x20\x20\x20\x20 --length=8 %source% > nul && set pbrtype=NTFS
 if %jumph%==0x9076EB && set /A address=%base%+3 &; raw cat --skip=%address% --locate=EXFAT\x20\x20\x20 --length=8 %source% > nul && set pbrtype=exFAT
 if not exist pbrtype && set /A address=%base%+14 &; cat --skip=%address% --locatei=FAT --length=0x5B %source% > nul && set pbrtype=FAT
-#NEW#
 if %pbrtype:~0,3%==FAT && set /A address=%base%+0x26 &; call :read %address% %source% &; set /A result=%result%&0xff &; if not %result%==0x28 if not %result%==0x29 |; set EBPB=MSDOS40 &; if %result%==0x28 && set ID=0
-#ORG#if %pbrtype:~0,3%==FAT && set /A address=%base%+0x26 &; call :read %address% %source% &; set /A result=%result%&0xff &; if not %result%==0x28 if not %result%==0x29 || set EBPB=MSDOS40
 if %pbrtype:~0,3%==FAT && if not exist EBPB && set /A address=%base%+0x42 &; call :read %address% %source% &; set /A result=%result%&0xff &; if not %result%==0x28 if not %result%==0x29 |; set EBPB=MSDOS70 &; if %result%==0x28 && set ID=0
-#ORG#if %pbrtype:~0,3%==FAT && if not exist EBPB && set /A address=%base%+0x42 &; call :read %address% %source% &; set /A result=%result%&0xff &; if not %result%==0x28 if not %result%==0x29 || set EBPB=MSDOS70
-#####
 if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --locate=NTFS\x20\x20\x20\x20 --length=8 %source% > nul && set pbrtype=NTFS
 if not exist pbrtype && set /A address=%base%+3 &; raw cat --skip=%address% --locate=EXFAT\x20\x20\x20 --length=8 %source% > nul && set pbrtype=exFAT
 if not %pbrtype%==exFAT && set /A address=%base%+0xB &; call :read %address% %source% &; if %result%==0 && set pbrtype= ! set result=
-#NEW#
 if exist BPB && if not exist pbrtype && set pbrtype=%BPB% && set BPB=
-#####
 if not exist pbrtype &; call :Fn.4 &; call :Fn.5 0 %v% &; echo -e -n \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20 && call Fn.5 0 %v%
 #BAD#if not exist pbrtype &; call :Fn.5 0 %v% &; echo -e -n \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20 && call Fn.5 0 %v%
 if not exist pbrtype &; if %CDROM%==Y && set bytepsec=2k ! set bytepsec=512 &; if exist BLOCK && set source=%BLOCK% ! set source=%source% &; if exist forcesec && set /A base=%forcesec% * %bytepsec% ! if %base%==0 && set base=%base% ! if exist startbyt && set base=%startbyt% ! if exist start && set /A base=%start% * %bytepsec% ! set base=%base% &; if %base%==0 && if "%DEVICE%"=="%~1" && echo Device %DEVICE% has no FAT/FAT32/NTFS/exFAT Partition Boot Record found && goto :eov ! if %base%==0 && echo %source% & skip=%base%: No FAT/FAT32/NTFS/exFAT Partition Boot Record found && goto :eov ! if exist forcesec && echo %source%: no FAT/FAT32/NTFS/exFAT Partition Boot Record found && goto :eov ! echo %source% & skip=%base%: no FAT/FAT32/NTFS/exFAT Partition Boot Record found && goto :eov
@@ -232,9 +223,7 @@ if exist BLOCK && if %pbrtype:~0,3%==FAT &; echo %pbrtype% Partition Boot Record
 set CDROM= && set skip= && set start=
 call Fn.4 ;; set /a x=%@retval%>>8
 if %format%==DEF && if %pbrtype:~0,3%==FAT && if not %EBPB%==MSDOS70 && set /a max=0x10000 * %bytpsec% / 1m &; echo -e -n %col4%total sectors\x20\x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4% 32 \t0x20 \t 4\t%col2%>=\x20%max%MB && set max=
-#ORG#if %format%==DEF && if %pbrtype:~0,3%==FAT && if not %EBPB%==MSDOS70 && set /a max=0x10000 * %bytpsec% / 1m &; echo -e -n %col4%total sectors\x20\x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4% 32 \t0x20 \t 4\t$[0x78]>=%max%MB && set max=
 if %format%==DEF && if %pbrtype:~0,3%==FAT && if %EBPB%==MSDOS70 && set /a max=0x10000 * %bytpsec% / 1m &; echo -e -n %col4%total sectors\x20\x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4% 32 \t0x20 \t 4\t%col2%>=\x20%max%MB && set max=
-#ORG#if %format%==DEF && if %pbrtype:~0,3%==FAT && if %EBPB%==MSDOS70 && set /a max=0x10000 * %bytpsec% / 1m &; echo -e -n %col4%total sectors\x20\x20\x20%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4% 32 \t0x20 \t 4\t$[0x78]>=%max%MB && set max=
 if %format%==DEF && if %pbrtype%==NTFS && echo -e -n %col4%reserved \t%totsec32% && call :Fn.5 26 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 40 %x% && echo -e %col4% 32 \t0x20 \t 4%col6%\tmust be zero
 if %format%==PQ && if %pbrtype:~0,3%==FAT && echo -e -n %col4%Big Total Sectors \t%totsec32% && call :Fn.5 34 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 48 %x% && echo -e %col4%%32 \t0x20 \t4
 if %format%==PQ && if %pbrtype%==NTFS && echo -e -n %col4%Total Sectors (>32MB) \t%totsec32% && call :Fn.5 34 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 48 %x% && echo -e %col4%%32 \t0x20 \t4
@@ -245,12 +234,9 @@ if %format%==MS && if %pbrtype%==NTFS && echo -e -n BPB_Reserved \t%totsec32% &&
 if %format%==JL && if %pbrtype%==NTFS && echo -e -n %col4%Unused (3)\t %totsec32% && call :Fn.5 27 %x% && echo -n %col4%%%totsc32h% && call :Fn.5 41 %x% && echo -e %col4%%32\t 0x20\t 4
 endlocal && set pbrtype=%pbrtype% && set "header1=%header1%"
 if %pbrtype:~0,3%==FAT && if %EBPB%==MSDOS70 && set EBPB= && goto :FAT32Specific
-#ORG#if %pbrtype:~0,3%==FAT && if %EBPB%==MSDOS70 && set EBPB= && goto :FAT32Specific ! set EBPB=
 if %pbrtype%==NTFS && goto :NTFSSpecific
 setlocal
-#NEW#
 if %pbrtype:~0,3%==FAT && if not %EBPB%==MSDOS70 && if not %EBPB%==MSDOS40 && setlocal && call :Fn.4 &; set /a v=%v%+5 &; call :fn.5 0 %v% &; endlocal && goto :noebp
-#####
 if %pbrtype:~0,3%==FAT && set /A address=%base%+0x24 &; call :read %address% %source% ;; set /A drvnumh=%result%&0xff &; set /a drivenum=%drvnumh%
 if %format%==DEF &; if %drivenum%<=0x7E && set "note=removable media" ! if %drivenum%==0x7F && set "note=internal pupose" ! if %drivenum%<=0xFE && set "note=fixed disk" ! if %drivenum%==0xFF && set "note=internal purpose" &; echo -e %col3%drive number \t%drivenum% \t\x20\x20%drvnumh% \t\t 36 \t0x24 \t 1\t%col5%%%note% && set note=
 if %format%==PQ && echo -e %col3%Drive ID \t\t%drivenum% \t\x20\x20%drvnumh% \t\t36 \t0x24 \t1
@@ -267,34 +253,23 @@ if %format%==PQ && echo -e %col3%Extended Boot Sig \t%extended% \t\x20\x20%exten
 if %format%==MS && echo -e BS_BootSig \t%extended% \t\x20\x20%extendh% \t\t38 \t0x26 \t1
 if %format%==JL && echo -e %col3%FAT_Signature\t %extended%\t\x20\x20\x20%extendh%\t\t 38\t 0x26\t 1
 set /A address=%base%+0x27 &; call :read %address% %source% ;; set /A uuidh=%result%&0xffffffff &; set uuid=00000000%uuidh:~2% &; set uuidh=0x%uuid:~-8,8%
-#NEW#
-if %format%==DEF &; if not %ID%==0 && echo -e %col4%uuid \t\t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t 39 \t0x27 \t 4 ! echo -e %col4%uuid \t\tN/A        \t\t 39 \t0x27 \t 4
-if %format%==PQ &; if not %ID%==0 && echo -e %col4%Serial Number \t\t%uuid:~-8,4%%%uuid:~-4,4% \x20%uuidh% \t39 \t0x27 \t4 ! echo -e %col4%Serial Number \t\tN/A        \t\t39 \t0x27 \t4
-if %format%==MS &; if not %ID%==0 && echo -e BS_VolID \t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t39 \t0x27 \t4 ! echo -e BS_VolID \tN/A        \t\t39 \t0x27 \t4
-if %format%==JL &; if not %ID%==0 && echo -e %col4%Volume_Serial\t %uuid:~-8,4%-%uuid:~-4,4% %uuidh%\t 39\t 0x27\t 4 ! echo -e %col4%Volume_Serial\t N/A        \t\t 39\t 0x27\t 4
-#ORG#if %format%==DEF && echo -e %col4%uuid \t\t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t 39 \t0x27 \t 4
-#ORG#if %format%==PQ && echo -e %col4%Serial Number \t\t%uuid:~-8,4%%%uuid:~-4,4% \x20%uuidh% \t39 \t0x27 \t4
-#ORG#if %format%==MS && echo -e BS_VolID \t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t39 \t0x27 \t4
-#ORG#if %format%==JL && echo -e %col4%Volume_Serial\t %uuid:~-8,4%-%uuid:~-4,4% %uuidh%\t 39\t 0x27\t 4
-#####
+if %format%==DEF && echo -e %col4%uuid \t\t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t 39 \t0x27 \t 4
+if %format%==PQ && echo -e %col4%Serial Number \t\t%uuid:~-8,4%%%uuid:~-4,4% \x20%uuidh% \t39 \t0x27 \t4
+if %format%==MS && echo -e BS_VolID \t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t39 \t0x27 \t4
+if %format%==JL && echo -e %col4%Volume_Serial\t %uuid:~-8,4%-%uuid:~-4,4% %uuidh%\t 39\t 0x27\t 4
 set /A address=%base%+0x2B &; raw cat --skip=%address% --length=11 %source% | set label= &; if not exist label && set "label=N/A        "
-#NEW#
 if %ID%=0 && set "label=N/A        "
-#####
 if %format%==DEF && echo -e %col3%label \t\t%label% \t\t 43 \t0x2B \t11
 if %format%==PQ && echo -e %col3%Volume Name \t\t%label% \t\t43 \t0x2B \t11
 if %format%==MS && echo -e BS_VolLab \t%label% \t\t43 \t0x2B \t11
 if %format%==JL && echo -e %col3%Volume_Label\t %label%\t\t 43\t 0x2B\t 11
 :noebp
-#NEW#
 set filesys= && set /A address=%base%+0x36 &; raw cat --skip=%address% --length=8 %source% | set filesys=
 if not /i %filesys:~0,3%==FAT && set "filesys=N/A     "
-#ORG#set /A address=%base%+0x36 &; raw cat --skip=%address% --length=8 %source% | set filesys= &; if not exist filesys && set "filesys=N/A     "
 if %format%==DEF && echo -e %col4%file system \t%filesys% \t\t 54 \t0x36 \t 8\t%col2%v4.0: FAT.....
 if %format%==PQ && echo -e %col4%File System ID \t\t%filesys% \t\t54 \t0x36 \t8\t%col2%always FAT.....
 if %format%==MS && echo -e BS_FilSysType \t%filesys% \t\t54 \t0x36 \t8\t%col2%version 4.0 FAT.....
 if %format%==JL && echo -e %col4%System_ID\t %filesys%\t\t 54\t 0x36\t 8\t%col2%always FAT.....
-#####
 endlocal
 goto :EndOfSector0
 ::
@@ -350,11 +325,9 @@ if %format%==JL && echo -e %col4%Disk_Number\t %drivenum%\t\x20\x20\x20%drvnumh%
 #-# Second header in case of FAT32
 setlocal
 read VAR.23 ;; set /A grphmode=%@retval%
-#NEW#
 if %grphmode%==0 && graphicsmode > nul &; set /A grphmode=%@retval%
 if not exist @uefi &; if %grphmode%<=0x10C && if %grphmode%>=0x102 && set grphmode=800 ! if %grphmode%<=0x11F && if %grphmode%>=0x113 && set grphmode=800 ! if %grphmode%<=0x12D && if %grphmode%>=0x124 && set grphmode=800 ! if %grphmode%<=0x13B && if %grphmode%>=0x132 && set grphmode=800 ! if %grphmode%<=0x146 && if %grphmode%>=0x140 && set grphmode=800 ! if %grphmode%<=0x14F && if %grphmode%>=0x147 && set grphmode=800 ! set grphmode=640
 #BAD#if not exist @uefi &; if %grphmode%<=0x10C && if %grphmode%>=0x102 && set grphmode=800 ! if %grphmode%<=0x11F && if %grphmode%>=0x113 && set grphmode=800 ! if %grphmode%<=0x145 && if %grphmode%>=0x143 && set grphmode=800 ! if %grphmode%<=0x14F && if %grphmode%>=0x147 && set grphmode=800 ! set grphmode=640
-#####
 if exist @uefi &; if %grphmode%>=0x101 && set grphmode=800 ! set grphmode=640
 if not exist grphmode && set grphmode=640
 if %grphmode%==640 &; echo -n $[0x0F][Hit Q to quit, any other key to continue] && pause && clear
@@ -376,25 +349,18 @@ if %format%==PQ && echo -e %col4%Extended Boot Sig \t%extended% \t\x20\x20%exten
 if %format%==MS && echo -e BS_BootSig \t%extended% \t\x20\x20%extendh% \t\t66 \t0x42 \t1
 if %format%==JL && echo -e %col4%FAT_Signature\t %extended%\t\x20\x20\x20%extendh%\t\t 66\t 0x42\t 1\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 set /A address=%base%+0x43 &; call :read %address% %source% ;; set /A uuidh=%result%&0xffffffff &; set uuid=00000000%uuidh:~2% &; set uuidh=0x%uuid:~-8,8%
-#NEW#
-if %format%==DEF &; if not %ID%==0 && echo -e %col3%uuid \t\t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t 67 \t0x43 \t 4 ! echo -e %col3%uuid \t\tN/A        \t\t 67 \t0x43 \t 4
-if %format%==PQ &; if not %ID%==0 && echo -e %col3%Serial Number \t\t%uuid:~-8,4%%%uuid:~-4,4% \x20%uuidh% \t43 \t0x43 \t4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20 ! echo -e %col3%Serial Number \t\tN/A        \t\t43 \t0x43 \t4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-if %format%==MS &; if not %ID%==0 && echo -e BS_VolID \t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t67 \t0x43 \t4 ! echo -e BS_VolID \tN/A        \t\t67 \t0x43 \t4
-if %format%==JL &; if not %ID%==0 && echo -e %col3%Volume_Serial\t %uuid:~-8,4%-%uuid:~-4,4% %uuidh%\t 67\t 0x43\t 4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20 ! echo -e %col3%Volume_Serial\t N/A        \t\t 67\t 0x43\t 4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-#ORG#if %format%==DEF && echo -e %col3%uuid \t\t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t 67 \t0x43 \t 4
-#ORG#if %format%==PQ && echo -e %col3%Serial Number \t\t%uuid:~-8,4%%%uuid:~-4,4% \x20%uuidh% \t43 \t0x43 \t4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-#ORG#if %format%==MS && echo -e BS_VolID \t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t67 \t0x43 \t4
-#ORG#if %format%==JL && echo -e %col3%Volume_Serial\t %uuid:~-8,4%-%uuid:~-4,4% %uuidh%\t 67\t 0x43\t 4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
-#####
+if %format%==DEF && echo -e %col3%uuid \t\t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t 67 \t0x43 \t 4
+if %format%==PQ && echo -e %col3%Serial Number \t\t%uuid:~-8,4%%%uuid:~-4,4% \x20%uuidh% \t43 \t0x43 \t4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+if %format%==MS && echo -e BS_VolID \t%uuid:~-8,4%-%uuid:~-4,4% %uuidh% \t67 \t0x43 \t4
+if %format%==JL && echo -e %col3%Volume_Serial\t %uuid:~-8,4%-%uuid:~-4,4% %uuidh%\t 67\t 0x43\t 4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 set /A address=%base%+0x47 &; raw cat --skip=%address% --length=11 %source% | set label= &; if not exist label && set "label=N/A        "
-#NEW#
 if %ID%==0 && set "label=N/A        "
-#####
 if %format%==DEF && echo -e %col4%label \t\t%label% \t\t 71 \t0x47 \t11
 if %format%==PQ && echo -e %col4%Volume Name \t\t%label% \t\t71 \t0x47 \t11\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==MS && echo -e BS_VolLab \t%label% \t\t71 \t0x47 \t11
 if %format%==JL && echo -e %col4%Volume_label\t %label%\t\t 71\t 0x47\t 11\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 set /A address=%base%+0x52 &; raw cat --skip=%address% --length=8 %source% | set filesys= &; if not exist filesys && set "filesys=N/A     "
+if not /i %filesys:~0,3%==FAT && set "filesys=N/A     "
 if %format%==DEF && echo -e %col3%file system \t%filesys% \t\t 82 \t0x52 \t 8\t%col5%v7.0: FAT32\x20\x20\x20\x20
 if %format%==PQ && echo -e %col3%File System ID \t\t%filesys% \t\t82 \t0x52 \t4\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
 if %format%==MS && echo -e BS_FilSysType \t%filesys% \t\t82 \t0x52 \t8\t
@@ -675,7 +641,7 @@ call Fn.4 ;; set /A h=%@retval% ;; set /a v=%h%>>8 ;; set /a h=%h%&0xff
 goto :eof
 ::
 :help
-echo PBRVIEW.G4B v0.5 (20260111), by deomsh
+echo PBRVIEW.G4B v0.5.1 (20260127), by deomsh
 echo Function: display FAT12/16, FAT32, NTFS or exFAT Partition Boot Record
 echo PBRVIEW.G4B [OPTIONAL] DEVICE|DISK|FILE [/MS|/PQ|/J|/BLUE]
 #ORG#echo PBRVIEW.G4B [--start=N|--skip=n|--force=N] DEVICE|DISK|FILE [/MS|/PQ|/J|/BLUE]
@@ -684,9 +650,7 @@ echo OPTIONAL: --BPB=FS --start=N|--skip=n|--force=N N/n: Start Sector/byte (0-N
 echo $[] If DEVICE is not a Partition use Image-file, Disk (check CD/DVD!) or Blocklist
 echo Optional: '/M[S]|/P[Q]|/J[L]' for Microsoft, PowerQuest or Jaclaz names/ colors
 echo $[]          '/B[LUE]' changes default names/ colors to blue color
-#ORG#echo $[] Unlock line 34 to change default colors to blue
 echo Remarks:
-#ORG#echo FILE can be a blocklist too; CD/DVD: blocklist only
 echo If FILE contains spaces/= use escaped chars '\ '/  '\=' or double qoutes around
 echo With --start=N|--force=N Sector number is in 512 byte units
 echo $[] With --start=N|--skip=n|--force=N Filesystem derived from Jump-code
@@ -697,11 +661,9 @@ echo In case of exFAT: switch /M[S], /P[Q] or /J[L] changes colors only
 echo Text mode of Grub4dos for Uefi NOT supported, use some Graphics mode
 echo Example: PBRVIEW.G4B (hd0,0)
 echo Example: PBRVIEW.G4B (fd0) /MS
-#ORG#echo Example: PBRVIEW.G4B (rd) /PQ
 echo Example: PBRVIEW.G4B --start=63 (hd0) /J
 echo Example: PBRVIEW.G4B (hd0,0)/FATIMAGE.IMG
 echo Example: PBRVIEW.G4B --force=2079 "(hd1,0)/Fat Image on Logical Partition.IMG"
-#ORG#echo Example: PBRVIEW.G4B --start=6 (hd0,0) /BLUE
 echo Example: PBRVIEW.G4B --skip=0x7E00 (0xe0)0+0x800 /BLUE
 echo Example: PBRVIEW.G4B --BPB=FAT (hd1,0) /PQ
 goto :eof
