@@ -1,4 +1,4 @@
-## PBRVIEW.G4B v0.5 (20260111), by deomsh
+## PBRVIEW.G4B v0.5.1 (20260127), by deomsh
 <pre><code>Function: Function: display FAT12/16, FAT32, NTFS or exFAT Partition Boot Record
 PBRVIEW.G4B [OPTIONAL] DEVICE|DISK|FILE [/MS|/PQ|/J|/BLUE]
 OPTIONAL: --BPB=FS --start=N|--skip=n|--force=N N/n: Start Sector/byte (0-N/n)
@@ -24,6 +24,9 @@ Example: PBRVIEW.G4B --skip=0x7E00 (0xe0)0+0x800 /BLUE
 Example: PBRVIEW.G4B --BPB=FAT (hd1,0) /PQ</code></pre> 
 
 ### History
+v0.5.1  
+Bugfix: only label and filesystem set to N/A if ebpb signature = 0x28   
+
 v0.5  
 New: uuid & label set to N/A if ebpb signature = 0x28  
 New: option --BPB=FS to force FAT below Version 4.0  
@@ -71,7 +74,7 @@ Version 0.1
 First published version  
 
 ### Screenshots
-![PBRVIEW G4B v0 5 version and textstat](https://github.com/user-attachments/assets/138284f3-a946-41f8-95a3-5b78308bda3a)
+![PBRVIEW G4B v0 5 1 version and textstat](https://github.com/user-attachments/assets/70c464d7-6938-4fde-99b4-223d31bc7fd0)
 
 #### Smallhelp
 ![PBRVIEW G4B v0 5 Smallhelp](https://github.com/user-attachments/assets/d846f4f0-91c5-4dcd-963e-b7643a3ee4bd)
